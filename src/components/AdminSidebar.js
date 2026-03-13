@@ -5,7 +5,7 @@ import { LayoutGrid, Package, ClipboardList, Printer, LogOut } from "lucide-reac
 
 export default function AdminSidebar() {
   return (
-    <aside className="w-full max-w-xs border-r border-white/10 bg-black/60 p-6">
+    <aside className="w-full border-b border-white/10 bg-black/60 p-6 lg:max-w-xs lg:border-b-0 lg:border-r">
       <div className="mb-10">
         <p className="text-xs uppercase tracking-[0.3em] text-white/50">Admin</p>
         <h1 className="font-display text-lg tracking-[0.35em]">EXIST WORLD WIDE</h1>

@@ -132,7 +132,7 @@ export default function AdminProducts() {
 
       <form
         onSubmit={handleSubmit}
-        className="grid gap-6 rounded-3xl border border-white/10 bg-[#111111] p-8 md:grid-cols-2"
+        className="grid gap-6 rounded-3xl border border-white/10 bg-[#111111] p-6 md:grid-cols-2 md:p-8"
       >
         <div>
           <label className="text-xs uppercase tracking-[0.3em] text-white/60">Name</label>
@@ -199,7 +199,7 @@ export default function AdminProducts() {
             multiple
             accept="image/*"
             onChange={(event) => setFiles(event.target.files)}
-            className="mt-2 w-full text-sm text-white/60"
+            className="mt-2 w-full max-w-xs text-xs text-white/60"
           />
           <p className="mt-2 text-xs text-white/40">Up to 5 images.</p>
         </div>
@@ -228,7 +228,7 @@ export default function AdminProducts() {
         {mergedProducts.map((product) => (
           <div
             key={product.id}
-            className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#111111] p-6"
+            className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#111111] p-6 sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
               <h3 className="text-sm uppercase tracking-[0.2em]">{product.name}</h3>

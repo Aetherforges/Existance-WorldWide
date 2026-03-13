@@ -53,8 +53,8 @@ export default function ShopClient() {
             <p className="text-xs uppercase tracking-[0.4em] text-white/50">
               Collection
             </p>
-            <h1 className="font-display text-3xl tracking-[0.25em]">
-              The Noir Series
+            <h1 className="font-display text-2xl tracking-[0.18em] md:text-3xl md:tracking-[0.25em]">
+              Elevate your existence
             </h1>
           </div>
           <p className="text-sm text-white/60">
@@ -68,6 +68,26 @@ export default function ShopClient() {
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
+        </div>
+
+        <div className="mt-16 rounded-3xl border border-white/10 bg-[#111111] p-8 text-center">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Reseller Community
+          </p>
+          <h2 className="mt-3 font-display text-2xl tracking-[0.2em]">
+            Join the Exist WorldWide Network
+          </h2>
+          <p className="mt-3 text-sm text-white/60">
+            Connect with fellow resellers and get priority updates.
+          </p>
+          <a
+            href="https://t.me/+8NjXVOkaADwyNGI1"
+            target="_blank"
+            rel="noreferrer"
+            className="glow-button mt-6 inline-flex rounded-full bg-white px-8 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-black"
+          >
+            Join the Community
+          </a>
         </div>
       </div>
     </div>
