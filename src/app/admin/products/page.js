@@ -17,19 +17,7 @@ const emptyProduct = {
   images: [],
 };
 
-const categories = [
-  "Earrings",
-  "Earrings Bundle",
-  "Tank Tops",
-  "Boxers",
-  "Pefumes",
-  "Watches",
-  "Pandora",
-  "Pods",
-  "Pro Clubs",
-  "Skirts",
-  "Dress",
-];
+const categories = ["Boxers", "Earrings", "Accessories"];
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);

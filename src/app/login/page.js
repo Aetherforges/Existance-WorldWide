@@ -35,8 +35,8 @@ export default function Login() {
         className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#111111] p-10"
       >
         <Link
-          href="/shop"
-          className="absolute left-5 top-5 rounded-full border border-white/20 p-2 text-white/70 hover:text-white"
+          href="/"
+          className="absolute right-5 top-5 rounded-full border border-white/20 p-2 text-white/70 transition hover:text-white hover:border-white/60"
           aria-label="Close"
         >
           <X size={16} />

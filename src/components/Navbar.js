@@ -9,19 +9,7 @@ export default function Navbar() {
   const { items, openCart } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
-  const categories = [
-    "Earrings",
-    "Earrings Bundle",
-    "Tank Tops",
-    "Boxers",
-    "Pefumes",
-    "Watches",
-    "Pandora",
-    "Pods",
-    "Pro Clubs",
-    "Skirts",
-    "Dress",
-  ];
+  const categories = ["Boxers", "Earrings", "Accessories"];
 
   return (
     <header className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/10">
@@ -36,7 +24,7 @@ export default function Navbar() {
               onClick={() => setMenuOpen((prev) => !prev)}
               className="flex items-center gap-2 hover:text-white/70"
             >
-              Shop
+              Categories
               <ChevronDown size={16} />
             </button>
             <div

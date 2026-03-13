@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import ProductCard from "../../components/ProductCard";
@@ -8,7 +8,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { sampleProducts } from "../../lib/sampleProducts";
 
 export default function ShopClient() {
-  const [products, setProducts] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
@@ -16,25 +16,17 @@ export default function ShopClient() {
   useEffect(() => {
     let active = true;
     async function load() {
-      let query = supabase
+      const query = supabase
         .from("products")
         .select("id,name,description,price,images,category,stock")
         .order("created_at", { ascending: false });
-
-      if (category) {
-        query = query.eq("category", category);
-      }
-
       const { data, error } = await query;
 
       if (!active) return;
       if (error || !data) {
-        setProducts(sampleProducts);
+        setAllProducts(sampleProducts);
       } else {
-        const fallback = category
-          ? sampleProducts.filter((item) => item.category === category)
-          : sampleProducts;
-        setProducts(data.length ? data : fallback);
+        setAllProducts(data.length ? data : sampleProducts);
       }
       setLoading(false);
     }
@@ -42,7 +34,12 @@ export default function ShopClient() {
     return () => {
       active = false;
     };
-  }, [category]);
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!category) return allProducts;
+    return allProducts.filter((item) => item.category === category);
+  }, [allProducts, category]);
 
   return (
     <div className="page-shell">
@@ -65,16 +62,17 @@ export default function ShopClient() {
         </div>
 
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
+          {!loading && filteredProducts.length === 0 && (
+            <div className="col-span-full flex justify-center">
+              <p className="text-center text-sm text-white/60">
+                No Items are currently Existing in this filter
+              </p>
+            </div>
+          )}
         </div>
-
-        {!loading && products.length === 0 && (
-          <p className="mt-8 text-sm text-white/60">
-            No Items are currently uploaded in this filter.
-          </p>
-        )}
 
         <div className="mt-16 rounded-3xl border border-white/10 bg-[#111111] p-8 text-center">
           <p className="text-xs uppercase tracking-[0.3em] text-white/60">
