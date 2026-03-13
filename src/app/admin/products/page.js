@@ -1,9 +1,8 @@
-﻿/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
-import { formatCurrency } from "../../../lib/format";
+import { formatCurrency, resolveImageUrl } from "../../../lib/format";
 
 const emptyProduct = {
   id: null,
@@ -32,6 +31,8 @@ export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(emptyProduct);
   const [files, setFiles] = useState([]);
+  const [localPreviews, setLocalPreviews] = useState([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -47,6 +48,26 @@ export default function AdminProducts() {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    if (!files || Array.from(files).length === 0) {
+      setLocalPreviews([]);
+      return;
+    }
+
+    const previews = Array.from(files)
+      .slice(0, 5)
+      .map((file) => ({
+        name: file.name,
+        url: URL.createObjectURL(file),
+      }));
+
+    setLocalPreviews(previews);
+
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [files]);
+
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
   };
@@ -59,7 +80,9 @@ export default function AdminProducts() {
       Array.from(files).slice(0, 5).map(async (file) => {
         const filename = `${crypto.randomUUID()}-${file.name}`;
         const { error } = await bucket.upload(filename, file);
-        if (error) return null;
+        if (error) {
+          throw new Error(error.message);
+        }
         const { data } = bucket.getPublicUrl(filename);
         return data.publicUrl;
       })
@@ -73,7 +96,20 @@ export default function AdminProducts() {
     setLoading(true);
     setError("");
 
-    const uploaded = await uploadImages();
+    if (!files.length && (!form.images || form.images.length === 0)) {
+      setError("Please upload at least one product image.");
+      setLoading(false);
+      return;
+    }
+
+    let uploaded = [];
+    try {
+      uploaded = await uploadImages();
+    } catch (err) {
+      setError(err.message ?? "Image upload failed.");
+      setLoading(false);
+      return;
+    }
     const payload = {
       name: form.name,
       description: form.description,
@@ -111,6 +147,7 @@ export default function AdminProducts() {
 
     setForm(emptyProduct);
     setFiles([]);
+    setFileInputKey((prev) => prev + 1);
     await fetchProducts();
     setLoading(false);
   }
@@ -126,6 +163,8 @@ export default function AdminProducts() {
       stock: product.stock,
       images: product.images ?? [],
     });
+    setFiles([]);
+    setFileInputKey((prev) => prev + 1);
   }
 
   async function handleDelete(id) {
@@ -227,14 +266,70 @@ export default function AdminProducts() {
         <div>
           <label className="text-xs uppercase tracking-[0.3em] text-white/60">Upload Images</label>
           <input
+            key={fileInputKey}
             type="file"
             multiple
             accept="image/*"
-            onChange={(event) => setFiles(event.target.files)}
+            onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 5))}
             className="mt-2 w-full max-w-xs text-xs text-white/60"
           />
           <p className="mt-2 text-xs text-white/40">Up to 5 images.</p>
         </div>
+
+        {(form.images?.length > 0 || localPreviews.length > 0) && (
+          <div className="md:col-span-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/60">Preview</p>
+            <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
+              {(form.images ?? []).slice(0, 5).map((image, index) => (
+                <div
+                  key={`${image}-${index}`}
+                  className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black"
+                  title="Existing image"
+                >
+                  <img
+                    src={resolveImageUrl(image)}
+                    alt="Existing product"
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  {index === 0 && (
+                    <span className="absolute left-1 top-1 rounded-full bg-white px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-black">
+                      Cover
+                    </span>
+                  )}
+                </div>
+              ))}
+
+              {localPreviews.map((preview, index) => (
+                <div
+                  key={preview.url}
+                  className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-white/20 bg-black"
+                  title={preview.name}
+                >
+                  <img
+                    src={preview.url}
+                    alt="Selected upload"
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  <span className="absolute right-1 top-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-black">
+                    New
+                  </span>
+                  {index === 0 && (form.images?.length ?? 0) === 0 && (
+                    <span className="absolute left-1 top-1 rounded-full bg-white px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-black">
+                      Cover
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {form.id && localPreviews.length > 0 && (
+              <p className="mt-2 text-xs text-white/40">
+                New uploads will replace the current gallery when you update.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="md:col-span-2 flex items-center gap-4">
           <button
@@ -247,7 +342,11 @@ export default function AdminProducts() {
           {form.id && (
             <button
               type="button"
-              onClick={() => setForm(emptyProduct)}
+              onClick={() => {
+                setForm(emptyProduct);
+                setFiles([]);
+                setFileInputKey((prev) => prev + 1);
+              }}
               className="rounded-full border border-white/20 px-6 py-3 text-xs uppercase tracking-[0.4em]"
             >
               Cancel

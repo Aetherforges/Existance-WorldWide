@@ -1,11 +1,17 @@
 "use client";
 
 import Image from "next/image";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { resolveImageUrl } from "../lib/format";
 
 export default function ProductGallery({ images = [] }) {
   const [active, setActive] = useState(images[0]);
+
+  useEffect(() => {
+    if (images.length > 0) {
+      setActive(images[0]);
+    }
+  }, [images]);
 
   if (images.length === 0) {
     return (
@@ -18,7 +24,7 @@ export default function ProductGallery({ images = [] }) {
   return (
     <div className="space-y-4">
       <Image
-        src={active}
+        src={resolveImageUrl(active)}
         alt="Product view"
         width={720}
         height={520}
@@ -35,7 +41,7 @@ export default function ProductGallery({ images = [] }) {
             onClick={() => setActive(image)}
           >
             <Image
-              src={image}
+              src={resolveImageUrl(image)}
               alt="Thumbnail"
               width={112}
               height={112}

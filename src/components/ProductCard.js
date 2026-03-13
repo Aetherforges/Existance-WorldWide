@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import ProductGallery from "./ProductGallery";
 import { useCart } from "../context/CartContext";
-import { formatCurrency } from "../lib/format";
+import { formatCurrency, resolveImageUrl } from "../lib/format";
 
 export default function ProductCard({ product }) {
   const [open, setOpen] = useState(false);
@@ -25,7 +25,7 @@ export default function ProductCard({ product }) {
         >
           <div className="relative overflow-hidden rounded-xl">
             <Image
-              src={product.images?.[0] ?? "/products/p1.svg"}
+              src={resolveImageUrl(product.images?.[0]) || "/products/p1.svg"}
               alt={product.name}
               width={640}
               height={520}

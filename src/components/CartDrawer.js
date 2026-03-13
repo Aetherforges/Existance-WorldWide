@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "../context/CartContext";
-import { formatCurrency } from "../lib/format";
+import { formatCurrency, resolveImageUrl } from "../lib/format";
 import Link from "next/link";
 
 export default function CartDrawer() {
@@ -42,7 +42,7 @@ export default function CartDrawer() {
               {items.map((item) => (
                 <div key={item.id} className="flex gap-4">
                   <Image
-                    src={item.images?.[0] ?? item.image}
+                    src={resolveImageUrl(item.images?.[0] ?? item.image)}
                     alt={item.name}
                     width={80}
                     height={80}
