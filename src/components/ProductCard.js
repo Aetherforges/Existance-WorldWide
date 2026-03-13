@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import ProductGallery from "./ProductGallery";
@@ -9,7 +9,9 @@ import { formatCurrency, resolveImageUrl } from "../lib/format";
 
 export default function ProductCard({ product }) {
   const [open, setOpen] = useState(false);
+  const [fly, setFly] = useState(null);
   const { addItem } = useCart();
+  const addButtonRef = useRef(null);
 
   return (
     <>
@@ -51,7 +53,17 @@ export default function ProductCard({ product }) {
         <button
           type="button"
           disabled={product.stock === 0}
-          onClick={() => addItem(product, 1)}
+          ref={addButtonRef}
+          onClick={() => {
+            addItem(product, 1);
+            if (addButtonRef.current) {
+              const rect = addButtonRef.current.getBoundingClientRect();
+              setFly({
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+              });
+            }
+          }}
           className={`mt-4 w-full rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
             product.stock === 0
               ? "cursor-not-allowed bg-white/10 text-white/40"
@@ -105,6 +117,19 @@ export default function ProductCard({ product }) {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {fly && (
+          <motion.div
+            className="pointer-events-none fixed z-50 h-3 w-3 rounded-full bg-white"
+            initial={{ opacity: 1, scale: 1, left: fly.x, top: fly.y }}
+            animate={{ opacity: 0, scale: 0.2, left: "90vw", top: "6vh" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            onAnimationComplete={() => setFly(null)}
+          />
         )}
       </AnimatePresence>
     </>

@@ -20,6 +20,7 @@ if (supabaseHost && !remotePatterns.some((pattern) => pattern.hostname === supab
 
 const nextConfig = {
   images: {
+    formats: ["image/avif", "image/webp"],
     remotePatterns,
   },
 };

@@ -20,6 +20,10 @@ export function CartProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (items.length === 0) {
+      window.localStorage.removeItem("eww-cart");
+      return;
+    }
     window.localStorage.setItem("eww-cart", JSON.stringify(items));
   }, [items]);
 

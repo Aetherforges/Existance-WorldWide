@@ -13,7 +13,7 @@ export default function AdminOrders() {
     const { data } = await supabase
       .from("orders")
       .select(
-        "id,total,status,delivery_method,created_at,customer_id,customers(email),order_items(quantity,products(name))"
+        "id,order_number,total,status,delivery_method,created_at,customer_id,customers(email),order_items(quantity,products(name))"
       )
       .order("created_at", { ascending: false });
     setOrders(data ?? []);
@@ -39,7 +39,7 @@ export default function AdminOrders() {
         <table className="min-w-full text-left text-sm">
           <thead className="bg-[#111111] text-xs uppercase tracking-[0.3em] text-white/60">
             <tr>
-              <th className="px-6 py-4">Order ID</th>
+              <th className="px-6 py-4">Order No.</th>
               <th className="px-6 py-4">Customer Email</th>
               <th className="px-6 py-4">Products</th>
               <th className="px-6 py-4">Total</th>
@@ -57,7 +57,9 @@ export default function AdminOrders() {
             )}
             {orders.map((order) => (
               <tr key={order.id} className="border-t border-white/10 bg-black/40">
-                <td className="px-6 py-4">{order.id}</td>
+                <td className="px-6 py-4">
+                  {order.order_number ?? order.id.slice(0, 8).toUpperCase()}
+                </td>
                 <td className="px-6 py-4">{order.customers?.email ?? "Guest"}</td>
                 <td className="px-6 py-4 text-xs text-white/60">
                   {(order.order_items ?? []).map((item, index) => (

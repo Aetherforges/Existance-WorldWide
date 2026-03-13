@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
+import { formatCurrency } from "../../../lib/format";
 
 export default function WaybillPage() {
   const [form, setForm] = useState({
@@ -21,6 +22,7 @@ export default function WaybillPage() {
   const [selectedOrderId, setSelectedOrderId] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [orderSearchError, setOrderSearchError] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -32,7 +34,7 @@ export default function WaybillPage() {
       const { data } = await supabase
         .from("orders")
         .select(
-          "id,created_at,shipping_name,phone,address,delivery_method,order_items(quantity)"
+          "id,order_number,total,created_at,shipping_name,phone,address,delivery_method,order_items(quantity,products(name,price))"
         )
         .order("created_at", { ascending: false });
       if (!active) return;
@@ -64,7 +66,10 @@ export default function WaybillPage() {
         ? new Date(order.created_at).toISOString().slice(0, 10)
         : prev.sendDate,
     }));
-    setOrderId(order.id.slice(0, 12).toUpperCase());
+    setOrderId(
+      (order.order_number || order.id.slice(0, 12)).toUpperCase()
+    );
+    setSelectedOrder(order);
   }, [orders, selectedOrderId]);
 
   function handleOrderSearch() {
@@ -73,10 +78,15 @@ export default function WaybillPage() {
       setOrderSearchError("Enter an order ID to search.");
       return;
     }
-    const match = orders.find(
-      (order) =>
-        order.id.toLowerCase() === term || order.id.toLowerCase().startsWith(term)
-    );
+    const match = orders.find((order) => {
+      const orderNumber = order.order_number?.toLowerCase() ?? "";
+      const orderId = order.id.toLowerCase();
+      return (
+        orderNumber === term ||
+        orderNumber.startsWith(term) ||
+        orderId.startsWith(term)
+      );
+    });
     if (!match) {
       setOrderSearchError("No matching order found.");
       return;
@@ -84,6 +94,17 @@ export default function WaybillPage() {
     setOrderSearchError("");
     setSelectedOrderId(match.id);
   }
+
+  const suggestions = useMemo(() => {
+    const term = orderSearch.trim().toLowerCase();
+    if (!term) return [];
+    return orders
+      .filter((order) => {
+        const orderNumber = order.order_number?.toLowerCase() ?? "";
+        return orderNumber.includes(term) || order.id.toLowerCase().includes(term);
+      })
+      .slice(0, 6);
+  }, [orderSearch, orders]);
 
   const sellerDetails = useMemo(
     () => ({
@@ -114,15 +135,36 @@ export default function WaybillPage() {
       <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-3xl border border-white/10 bg-[#111111] p-8">
           <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Search Order ID
+            Search Order Number
           </label>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <input
-              value={orderSearch}
-              onChange={(event) => setOrderSearch(event.target.value)}
-              placeholder="Paste order ID"
-              className="w-full flex-1 rounded-xl bg-black px-4 py-3 text-white ring-1 ring-white/10 focus:ring-white/40"
-            />
+            <div className="relative w-full flex-1">
+              <input
+                value={orderSearch}
+                onChange={(event) => setOrderSearch(event.target.value)}
+                placeholder="Paste order number"
+                className="w-full rounded-xl bg-black px-4 py-3 text-white ring-1 ring-white/10 focus:ring-white/40"
+              />
+              {suggestions.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-10 mt-2 rounded-2xl border border-white/10 bg-[#111111] p-2 text-xs">
+                  {suggestions.map((order) => (
+                    <button
+                      key={order.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedOrderId(order.id);
+                        setOrderSearch(order.order_number || order.id);
+                        setOrderSearchError("");
+                      }}
+                      className="block w-full rounded-lg px-3 py-2 text-left uppercase tracking-[0.2em] text-white/80 hover:bg-white/10"
+                    >
+                      {(order.order_number || order.id.slice(0, 8)).toUpperCase()} ·{" "}
+                      {order.shipping_name || "Guest"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={handleOrderSearch}
@@ -242,7 +284,7 @@ export default function WaybillPage() {
             <div className="grid grid-cols-[1fr_1fr] border-b border-white/10">
               <div className="border-r border-white/10 p-4">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                  Order ID
+                  Order Number
                 </p>
                 <p className="mt-2 text-lg font-semibold tracking-[0.2em]">
                   {orderId}
@@ -289,12 +331,32 @@ export default function WaybillPage() {
               </div>
               <div className="p-4">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                  Notes
+                  Total Price
                 </p>
-                <p className="mt-2 text-white/70">
-                  © All Rights Reserved Exist WorldWide
+                <p className="mt-2 text-lg font-semibold">
+                  {typeof selectedOrder?.total === "number"
+                    ? formatCurrency(selectedOrder.total)
+                    : "-"}
                 </p>
               </div>
+            </div>
+            <div className="border-t border-white/10 p-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                Items Ordered
+              </p>
+              <div className="mt-2 space-y-1 text-white/70">
+                {(selectedOrder?.order_items ?? []).map((item, index) => (
+                  <p key={`${item.products?.name}-${index}`}>
+                    {item.products?.name || "Item"} x{item.quantity}
+                  </p>
+                ))}
+                {(selectedOrder?.order_items ?? []).length === 0 && (
+                  <p>-</p>
+                )}
+              </div>
+              <p className="mt-4 text-xs text-white/50">
+                © All Rights Reserved Exist WorldWide
+              </p>
             </div>
           </div>
         </div>

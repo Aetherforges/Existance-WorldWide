@@ -1,5 +1,6 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createUniqueOrderNumber } from "../../../../lib/orderNumber";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -40,10 +41,13 @@ export async function POST(request) {
       }
     }
 
+    const orderNumber =
+      order?.order_number || (await createUniqueOrderNumber(supabase));
     const { data: createdOrder, error: orderError } = await supabase
       .from("orders")
       .insert({
         customer_id: customerId,
+        order_number: orderNumber,
         total: order.total,
         status: order.status,
         delivery_method: order.delivery_method,
@@ -51,7 +55,7 @@ export async function POST(request) {
         phone: order.phone,
         address: order.address,
       })
-      .select("id")
+      .select("id,order_number")
       .single();
 
     if (orderError) {
@@ -82,7 +86,10 @@ export async function POST(request) {
       )
     );
 
-    return NextResponse.json({ id: createdOrder.id });
+    return NextResponse.json({
+      id: createdOrder.id,
+      order_number: createdOrder.order_number,
+    });
   } catch (err) {
     return NextResponse.json({ message: err.message }, { status: 500 });
   }

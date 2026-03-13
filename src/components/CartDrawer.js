@@ -22,7 +22,7 @@ export default function CartDrawer() {
             onClick={closeCart}
           />
           <motion.aside
-            className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-[#111111] border-l border-white/10 p-6"
+            className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-[#111111] border-l border-white/10 p-6"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
@@ -35,60 +35,71 @@ export default function CartDrawer() {
               </button>
             </div>
 
-            <div className="mt-6 space-y-6">
+            <div className="mt-6 flex-1 min-h-0">
               {items.length === 0 && (
                 <p className="text-white/60">Your cart is empty.</p>
               )}
-              {items.map((item) => (
-                <div key={item.id} className="flex gap-4">
-                  <Image
-                    src={resolveImageUrl(item.images?.[0] ?? item.image)}
-                    alt={item.name}
-                    width={80}
-                    height={80}
-                    className="h-20 w-20 rounded-lg border border-white/10 object-cover"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm uppercase tracking-[0.15em]">
-                        {item.name}
-                      </h3>
-                      <button onClick={() => removeItem(item.id)}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                    <p className="text-white/60 text-sm">
-                      {formatCurrency(item.price)}
-                    </p>
-                    <div className="mt-3 flex items-center gap-3">
-                      <button
-                        className="rounded-full border border-white/20 p-1"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateQuantity(item.id, Number(event.target.value || 1))
-                        }
-                        className="w-16 rounded-full bg-black px-3 py-1 text-center text-sm text-white ring-1 ring-white/20"
+              <div className="max-h-full space-y-6 overflow-y-auto pr-2 scroll-smooth scrollbar-elegant">
+                <AnimatePresence initial={false}>
+                  {items.map((item) => (
+                    <motion.div
+                      key={item.id}
+                      className="flex gap-4"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Image
+                        src={resolveImageUrl(item.images?.[0] ?? item.image)}
+                        alt={item.name}
+                        width={80}
+                        height={80}
+                        className="h-20 w-20 rounded-lg border border-white/10 object-cover"
                       />
-                      <button
-                        className="rounded-full border border-white/20 p-1"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm uppercase tracking-[0.15em]">
+                            {item.name}
+                          </h3>
+                          <button onClick={() => removeItem(item.id)}>
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <p className="text-white/60 text-sm">
+                          {formatCurrency(item.price)}
+                        </p>
+                        <div className="mt-3 flex items-center gap-3">
+                          <button
+                            className="rounded-full border border-white/20 p-1"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(event) =>
+                              updateQuantity(item.id, Number(event.target.value || 1))
+                            }
+                            className="w-16 rounded-full bg-black px-3 py-1 text-center text-sm text-white ring-1 ring-white/20"
+                          />
+                          <button
+                            className="rounded-full border border-white/20 p-1"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
 
-            <div className="mt-8 border-t border-white/10 pt-6">
+            <div className="mt-6 border-t border-white/10 pt-6">
               <div className="flex items-center justify-between text-lg">
                 <span>Total</span>
                 <span>{formatCurrency(total)}</span>

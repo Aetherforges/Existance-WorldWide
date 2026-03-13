@@ -24,6 +24,7 @@ create table if not exists customers (
 -- ORDERS
 create table if not exists orders (
   id uuid primary key default uuid_generate_v4(),
+  order_number text unique,
   customer_id uuid references customers(id) on delete set null,
   total numeric not null,
   status text default 'Pending',
@@ -105,4 +106,3 @@ for insert with check (auth.role() = 'authenticated');
 drop policy if exists "Admin manage order items" on order_items;
 create policy "Admin manage order items" on order_items
 for all using (is_admin()) with check (is_admin());
-
