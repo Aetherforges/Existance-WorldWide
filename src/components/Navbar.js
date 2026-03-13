@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { ShoppingCart, UserRound, LogIn, ChevronDown } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { useState } from "react";
 
 export default function Navbar() {
   const { items, openCart } = useCart();
+  const [menuOpen, setMenuOpen] = useState(false);
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   const categories = [
     "Earrings",
@@ -23,25 +25,31 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/10">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/shop" className="font-display text-lg tracking-[0.4em]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/shop" className="font-display text-lg tracking-[0.25em] sm:tracking-[0.4em]">
           EXIST WORLD WIDE
         </Link>
-        <nav className="flex items-center gap-6 text-sm uppercase tracking-[0.2em]">
+        <nav className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] sm:gap-6 sm:text-sm sm:tracking-[0.2em]">
           <div className="group relative">
             <button
               type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
               className="flex items-center gap-2 hover:text-white/70"
             >
               Shop
               <ChevronDown size={16} />
             </button>
-            <div className="absolute left-0 top-full hidden w-56 rounded-2xl border border-white/10 bg-[#111111] p-3 text-xs uppercase tracking-[0.25em] shadow-2xl group-hover:block">
+            <div
+              className={`${
+                menuOpen ? "block" : "hidden"
+              } absolute left-0 top-full w-56 rounded-2xl border border-white/10 bg-[#111111] p-3 text-xs uppercase tracking-[0.25em] shadow-2xl sm:group-hover:block`}
+            >
               {categories.map((category) => (
                 <Link
                   key={category}
                   href={`/shop?category=${encodeURIComponent(category)}`}
                   className="block rounded-lg px-3 py-2 hover:bg-white/10"
+                  onClick={() => setMenuOpen(false)}
                 >
                   {category}
                 </Link>
