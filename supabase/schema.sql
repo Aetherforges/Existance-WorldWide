@@ -1,5 +1,7 @@
+-- Enable UUID generation
 create extension if not exists "uuid-ossp";
 
+-- PRODUCTS
 create table if not exists products (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
@@ -12,12 +14,14 @@ create table if not exists products (
   created_at timestamp with time zone default now()
 );
 
+-- CUSTOMERS
 create table if not exists customers (
   id uuid primary key default uuid_generate_v4(),
   email text unique not null,
   created_at timestamp with time zone default now()
 );
 
+-- ORDERS
 create table if not exists orders (
   id uuid primary key default uuid_generate_v4(),
   customer_id uuid references customers(id) on delete set null,
@@ -30,6 +34,7 @@ create table if not exists orders (
   created_at timestamp with time zone default now()
 );
 
+-- ORDER ITEMS
 create table if not exists order_items (
   id uuid primary key default uuid_generate_v4(),
   order_id uuid references orders(id) on delete cascade,
@@ -37,24 +42,67 @@ create table if not exists order_items (
   quantity integer not null default 1
 );
 
--- Basic policies for development. Tighten these for production.
--- Enable row level security
+-- USER ROLES (RBAC)
+create table if not exists user_roles (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  role text not null check (role in ('admin','staff','customer')),
+  created_at timestamp with time zone default now(),
+  unique (user_id, role)
+);
+
+create or replace function is_admin()
+returns boolean
+language sql
+security definer
+as $$
+  select exists (
+    select 1 from user_roles
+    where user_id = auth.uid()
+      and role = 'admin'
+  );
+$$;
+
+-- RLS
 alter table products enable row level security;
 alter table customers enable row level security;
 alter table orders enable row level security;
 alter table order_items enable row level security;
+alter table user_roles enable row level security;
 
+-- PRODUCTS POLICIES
+drop policy if exists "Public read products" on products;
 create policy "Public read products" on products
-  for select using (true);
+for select using (true);
 
-create policy "Authenticated manage products" on products
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+drop policy if exists "Admin manage products" on products;
+create policy "Admin manage products" on products
+for all using (is_admin()) with check (is_admin());
 
-create policy "Customers manage own record" on customers
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+-- CUSTOMERS POLICIES
+drop policy if exists "Authenticated insert customers" on customers;
+create policy "Authenticated insert customers" on customers
+for insert with check (auth.role() = 'authenticated');
 
-create policy "Orders manage own" on orders
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+drop policy if exists "Admin manage customers" on customers;
+create policy "Admin manage customers" on customers
+for all using (is_admin()) with check (is_admin());
 
-create policy "Order items manage own" on order_items
-  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+-- ORDERS POLICIES
+drop policy if exists "Authenticated insert orders" on orders;
+create policy "Authenticated insert orders" on orders
+for insert with check (auth.role() = 'authenticated');
+
+drop policy if exists "Admin manage orders" on orders;
+create policy "Admin manage orders" on orders
+for all using (is_admin()) with check (is_admin());
+
+-- ORDER ITEMS POLICIES
+drop policy if exists "Authenticated insert order items" on order_items;
+create policy "Authenticated insert order items" on order_items
+for insert with check (auth.role() = 'authenticated');
+
+drop policy if exists "Admin manage order items" on order_items;
+create policy "Admin manage order items" on order_items
+for all using (is_admin()) with check (is_admin());
+
