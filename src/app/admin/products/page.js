@@ -1,10 +1,9 @@
 ﻿/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { formatCurrency } from "../../../lib/format";
-import { sampleProducts } from "../../../lib/sampleProducts";
 
 const emptyProduct = {
   id: null,
@@ -31,11 +30,10 @@ const categories = [
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
-  const [defaultProducts, setDefaultProducts] = useState(sampleProducts);
   const [form, setForm] = useState(emptyProduct);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editingDefaultId, setEditingDefaultId] = useState(null);
+  const [error, setError] = useState("");
 
   async function fetchProducts() {
     const { data } = await supabase
@@ -48,11 +46,6 @@ export default function AdminProducts() {
   useEffect(() => {
     fetchProducts();
   }, []);
-
-  const mergedProducts = useMemo(
-    () => [...products, ...defaultProducts],
-    [products, defaultProducts]
-  );
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -78,6 +71,7 @@ export default function AdminProducts() {
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
+    setError("");
 
     const uploaded = await uploadImages();
     const payload = {
@@ -90,40 +84,30 @@ export default function AdminProducts() {
       images: uploaded.length ? uploaded : form.images,
     };
 
-    if (editingDefaultId) {
-      const { data: created } = await supabase
-        .from("products")
-        .insert(payload)
-        .select("*")
-        .single();
-      if (created) {
-        setProducts((prev) => [created, ...prev]);
-      }
-      setDefaultProducts((prev) =>
-        prev.filter((item) => item.id !== editingDefaultId)
-      );
-      setEditingDefaultId(null);
-    } else if (form.id) {
-      const { data: updated } = await supabase
-        .from("products")
-        .update(payload)
-        .eq("id", form.id)
-        .select("*")
-        .single();
-      if (updated) {
+    try {
+      if (form.id) {
+        const res = await fetch("/api/admin/products", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: form.id, ...payload }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message ?? "Update failed");
         setProducts((prev) =>
-          prev.map((item) => (item.id === updated.id ? updated : item))
+          prev.map((item) => (item.id === data.data.id ? data.data : item))
         );
+      } else {
+        const res = await fetch("/api/admin/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message ?? "Create failed");
+        setProducts((prev) => [data.data, ...prev]);
       }
-    } else {
-      const { data: created } = await supabase
-        .from("products")
-        .insert(payload)
-        .select("*")
-        .single();
-      if (created) {
-        setProducts((prev) => [created, ...prev]);
-      }
+    } catch (err) {
+      setError(err.message ?? "Unable to save product.");
     }
 
     setForm(emptyProduct);
@@ -134,7 +118,7 @@ export default function AdminProducts() {
 
   function handleEdit(product) {
     setForm({
-      id: defaultProducts.find((item) => item.id === product.id) ? null : product.id,
+      id: product.id,
       name: product.name,
       description: product.description,
       price: product.price,
@@ -143,20 +127,21 @@ export default function AdminProducts() {
       stock: product.stock,
       images: product.images ?? [],
     });
-    if (defaultProducts.find((item) => item.id === product.id)) {
-      setEditingDefaultId(product.id);
-    } else {
-      setEditingDefaultId(null);
-    }
   }
 
   async function handleDelete(id) {
-    if (defaultProducts.find((item) => item.id === id)) {
-      setDefaultProducts((prev) => prev.filter((item) => item.id !== id));
+    setError("");
+    const res = await fetch("/api/admin/products", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data?.message ?? "Delete failed");
       return;
     }
-    await supabase.from("products").delete().eq("id", id);
-    await fetchProducts();
+    setProducts((prev) => prev.filter((item) => item.id !== id));
   }
 
   return (
@@ -172,6 +157,7 @@ export default function AdminProducts() {
           Refresh
         </button>
       </div>
+      {error && <p className="text-sm text-red-400">{error}</p>}
 
       <form
         onSubmit={handleSubmit}
@@ -277,7 +263,7 @@ export default function AdminProducts() {
       </form>
 
       <div className="space-y-4">
-        {mergedProducts.map((product) => (
+        {products.map((product) => (
           <div
             key={product.id}
             className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-[#111111] p-6 sm:flex-row sm:items-center sm:justify-between"
@@ -304,6 +290,9 @@ export default function AdminProducts() {
             </div>
           </div>
         ))}
+        {products.length === 0 && (
+          <p className="text-sm text-white/60">No products yet.</p>
+        )}
       </div>
     </div>
   );
