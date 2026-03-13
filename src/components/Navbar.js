@@ -9,7 +9,17 @@ export default function Navbar() {
   const { items, openCart } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
-  const categories = ["Boxers", "Earrings", "Accessories"];
+  const categories = [
+    "Boxers",
+    "Earrings Bundle",
+    "Perfumes",
+    "Dress",
+    "Skirts",
+    "Pods",
+    "Watch",
+    "Tanktops",
+    "Close Caps",
+  ];
 
   return (
     <header className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/10">
