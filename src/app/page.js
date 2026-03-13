@@ -12,7 +12,7 @@ export default function Home() {
     <div className="flex min-h-screen items-center justify-center bg-black px-6">
       <div className="text-center">
         <motion.h1
-          className="font-display text-4xl tracking-[0.6em] text-white md:text-6xl"
+          className="font-display text-3xl tracking-[0.35em] text-white sm:text-4xl sm:tracking-[0.5em] md:text-6xl md:tracking-[0.6em]"
           style={{ textShadow: "0 0 30px rgba(255,255,255,0.25)" }}
           initial="hidden"
           animate="visible"
