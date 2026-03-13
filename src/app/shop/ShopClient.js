@@ -72,7 +72,7 @@ export default function ShopClient() {
 
         {!loading && products.length === 0 && (
           <p className="mt-8 text-sm text-white/60">
-            There are no Existing Products in this page for now.
+            No Items are currently uploaded in this filter.
           </p>
         )}
 
