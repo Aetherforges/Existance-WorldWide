@@ -17,6 +17,20 @@ const emptyProduct = {
   images: [],
 };
 
+const categories = [
+  "Earrings",
+  "Earrings Bundle",
+  "Tank Tops",
+  "Boxers",
+  "Pefumes",
+  "Watches",
+  "Pandora",
+  "Pods",
+  "Pro Clubs",
+  "Skirts",
+  "Dress",
+];
+
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
   const [defaultProducts, setDefaultProducts] = useState(sampleProducts);
@@ -145,12 +159,21 @@ export default function AdminProducts() {
         </div>
         <div>
           <label className="text-xs uppercase tracking-[0.3em] text-white/60">Category</label>
-          <input
+          <select
             required
             value={form.category}
             onChange={handleChange("category")}
             className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
+          >
+            <option value="" disabled>
+              Select category
+            </option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="md:col-span-2">
           <label className="text-xs uppercase tracking-[0.3em] text-white/60">Description</label>

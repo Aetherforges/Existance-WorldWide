@@ -70,6 +70,12 @@ export default function ShopClient() {
           ))}
         </div>
 
+        {!loading && products.length === 0 && (
+          <p className="mt-8 text-sm text-white/60">
+            There are no Existing Products in this page for now.
+          </p>
+        )}
+
         <div className="mt-16 rounded-3xl border border-white/10 bg-[#111111] p-8 text-center">
           <p className="text-xs uppercase tracking-[0.3em] text-white/60">
             Reseller Community

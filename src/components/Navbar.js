@@ -11,6 +11,7 @@ export default function Navbar() {
     "Earrings",
     "Earrings Bundle",
     "Tank Tops",
+    "Boxers",
     "Pefumes",
     "Watches",
     "Pandora",

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { X } from "lucide-react";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -35,8 +37,15 @@ export default function AdminLogin() {
     <div className="page-shell flex min-h-screen items-center justify-center px-6">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111111] p-10"
+        className="relative w-full max-w-md rounded-3xl border border-white/10 bg-[#111111] p-10"
       >
+        <Link
+          href="/shop"
+          className="absolute left-5 top-5 rounded-full border border-white/20 p-2 text-white/70 hover:text-white"
+          aria-label="Close"
+        >
+          <X size={16} />
+        </Link>
         <h1 className="font-display text-2xl tracking-[0.2em]">Admin Login</h1>
         <p className="mt-2 text-sm text-white/60">
           Secure access for EXIST WORLD WIDE operations.
@@ -76,3 +85,4 @@ export default function AdminLogin() {
     </div>
   );
 }
+
