@@ -17,6 +17,7 @@ const emptyProduct = {
 
 const categories = [
   "Boxers",
+  "Earrings",
   "Earrings Bundle",
   "Perfumes",
   "Dress",
@@ -273,7 +274,10 @@ export default function AdminProducts() {
             onChange={(event) => setFiles(Array.from(event.target.files ?? []).slice(0, 5))}
             className="mt-2 w-full max-w-xs text-xs text-white/60"
           />
-          <p className="mt-2 text-xs text-white/40">Up to 5 images.</p>
+          <p className="mt-2 text-xs text-white/40">
+            Up to 5 images. Uploading here saves to the `product-images` bucket and
+            stores the public URL automatically.
+          </p>
         </div>
 
         {(form.images?.length > 0 || localPreviews.length > 0) && (

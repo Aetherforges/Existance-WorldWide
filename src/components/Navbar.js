@@ -11,6 +11,7 @@ export default function Navbar() {
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
   const categories = [
     "Boxers",
+    "Earrings",
     "Earrings Bundle",
     "Perfumes",
     "Dress",
