@@ -91,15 +91,39 @@ export default function AdminProducts() {
     };
 
     if (editingDefaultId) {
-      await supabase.from("products").insert(payload);
+      const { data: created } = await supabase
+        .from("products")
+        .insert(payload)
+        .select("*")
+        .single();
+      if (created) {
+        setProducts((prev) => [created, ...prev]);
+      }
       setDefaultProducts((prev) =>
         prev.filter((item) => item.id !== editingDefaultId)
       );
       setEditingDefaultId(null);
     } else if (form.id) {
-      await supabase.from("products").update(payload).eq("id", form.id);
+      const { data: updated } = await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", form.id)
+        .select("*")
+        .single();
+      if (updated) {
+        setProducts((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item))
+        );
+      }
     } else {
-      await supabase.from("products").insert(payload);
+      const { data: created } = await supabase
+        .from("products")
+        .insert(payload)
+        .select("*")
+        .single();
+      if (created) {
+        setProducts((prev) => [created, ...prev]);
+      }
     }
 
     setForm(emptyProduct);
@@ -137,9 +161,16 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-10">
-      <div>
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-xs uppercase tracking-[0.4em] text-white/50">Inventory</p>
         <h1 className="font-display text-3xl tracking-[0.2em]">Product Management</h1>
+        <button
+          type="button"
+          onClick={fetchProducts}
+          className="rounded-full border border-white/20 px-4 py-2 text-xs uppercase tracking-[0.3em]"
+        >
+          Refresh
+        </button>
       </div>
 
       <form
