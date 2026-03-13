@@ -86,25 +86,24 @@ export default function AdminProducts() {
 
     try {
       if (form.id) {
-        const res = await fetch("/api/admin/products", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: form.id, ...payload }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message ?? "Update failed");
+        const { data, error } = await supabase
+          .from("products")
+          .update(payload)
+          .eq("id", form.id)
+          .select("*")
+          .single();
+        if (error) throw new Error(error.message);
         setProducts((prev) =>
-          prev.map((item) => (item.id === data.data.id ? data.data : item))
+          prev.map((item) => (item.id === data.id ? data : item))
         );
       } else {
-        const res = await fetch("/api/admin/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.message ?? "Create failed");
-        setProducts((prev) => [data.data, ...prev]);
+        const { data, error } = await supabase
+          .from("products")
+          .insert(payload)
+          .select("*")
+          .single();
+        if (error) throw new Error(error.message);
+        setProducts((prev) => [data, ...prev]);
       }
     } catch (err) {
       setError(err.message ?? "Unable to save product.");
@@ -131,14 +130,9 @@ export default function AdminProducts() {
 
   async function handleDelete(id) {
     setError("");
-    const res = await fetch("/api/admin/products", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data?.message ?? "Delete failed");
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    if (error) {
+      setError(error.message ?? "Delete failed");
       return;
     }
     setProducts((prev) => prev.filter((item) => item.id !== id));

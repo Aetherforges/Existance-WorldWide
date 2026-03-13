@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { X } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function AdminLogin() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,15 +18,27 @@ export default function AdminLogin() {
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
+    const { error: authError, data } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
+    }
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data?.message ?? "Invalid credentials");
+    const user = data.user;
+    const { data: role } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (!role) {
+      await supabase.auth.signOut();
+      setError("Admin access not granted.");
       setLoading(false);
       return;
     }
@@ -52,12 +65,13 @@ export default function AdminLogin() {
         </p>
 
         <label className="mt-8 block text-xs uppercase tracking-[0.3em] text-white/60">
-          Username
+          Admin Email
         </label>
         <input
+          type="email"
           required
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
           className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
         />
 

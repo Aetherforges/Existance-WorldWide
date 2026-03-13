@@ -70,26 +70,58 @@ export default function Checkout() {
     }
 
     try {
-      const res = await fetch("/api/admin/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer: { email: form.email },
-          order: {
-            total,
-            status: "Pending",
-            delivery_method: form.delivery,
-            shipping_name: form.name,
-            phone: form.phone,
-            address: form.address,
-          },
-          items,
-        }),
-      });
+      let customerId = null;
+      if (form.email) {
+        const { data: existing } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("email", form.email)
+          .maybeSingle();
 
-      const result = await res.json();
-      if (!res.ok) {
-        throw new Error(result?.message ?? "Checkout failed.");
+        if (existing?.id) {
+          customerId = existing.id;
+        } else {
+          const { data: newCustomer } = await supabase
+            .from("customers")
+            .insert({ email: form.email })
+            .select("id")
+            .single();
+          customerId = newCustomer?.id;
+        }
+      }
+
+      const { data: order } = await supabase
+        .from("orders")
+        .insert({
+          customer_id: customerId,
+          total,
+          status: "Pending",
+          delivery_method: form.delivery,
+          shipping_name: form.name,
+          phone: form.phone,
+          address: form.address,
+        })
+        .select("id")
+        .single();
+
+      if (order?.id) {
+        const orderItems = items.map((item) => ({
+          order_id: order.id,
+          product_id: item.id,
+          quantity: item.quantity,
+        }));
+        await supabase.from("order_items").insert(orderItems);
+
+        await Promise.all(
+          items.map((item) =>
+            supabase
+              .from("products")
+              .update({
+                stock: Math.max(0, (item.stock ?? 0) - item.quantity),
+              })
+              .eq("id", item.id)
+          )
+        );
       }
 
       clearCart();
