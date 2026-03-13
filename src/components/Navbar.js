@@ -14,7 +14,10 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/10">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <Link href="/shop" className="font-display text-lg tracking-[0.25em] sm:tracking-[0.4em]">
+        <Link
+          href="/shop"
+          className="font-display text-xl tracking-[0.2em] sm:text-3xl sm:tracking-[0.3em] lg:text-5xl lg:tracking-[0.4em]"
+        >
           EXIST WORLD WIDE
         </Link>
         <nav className="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] sm:gap-6 sm:text-sm sm:tracking-[0.2em]">

@@ -8,6 +8,7 @@ import { formatCurrency } from "../../lib/format";
 export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [customerCount, setCustomerCount] = useState(0);
+  const [inventory, setInventory] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -23,6 +24,12 @@ export default function AdminDashboard() {
         .select("id", { count: "exact", head: true });
       if (!active) return;
       setCustomerCount(count ?? 0);
+      const { data: products } = await supabase
+        .from("products")
+        .select("id,name,category,price,stock")
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      setInventory(products ?? []);
     }
     load();
     return () => {
@@ -81,6 +88,54 @@ export default function AdminDashboard() {
           labels={monthlyLabels}
           data={monthlyData}
         />
+      </div>
+
+      <div className="rounded-3xl border border-white/10 bg-[#111111] p-6">
+        <h2 className="text-sm uppercase tracking-[0.3em] text-white/60">
+          Inventory Overview
+        </h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-xs uppercase tracking-[0.3em] text-white/60">
+              <tr>
+                <th className="px-4 py-3">Product</th>
+                <th className="px-4 py-3">Category</th>
+                <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Stock</th>
+                <th className="px-4 py-3">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventory.map((item) => {
+                const stock = item.stock ?? 0;
+                const status =
+                  stock === 0 ? "Out of Stock" : stock < 5 ? "Low Stock" : "In Stock";
+                const color =
+                  stock === 0
+                    ? "text-red-300"
+                    : stock < 5
+                      ? "text-amber-300"
+                      : "text-emerald-300";
+                return (
+                  <tr key={item.id} className="border-t border-white/10">
+                    <td className="px-4 py-3">{item.name}</td>
+                    <td className="px-4 py-3">{item.category || "Uncategorized"}</td>
+                    <td className="px-4 py-3">{formatCurrency(item.price)}</td>
+                    <td className="px-4 py-3">{stock}</td>
+                    <td className={`px-4 py-3 ${color}`}>{status}</td>
+                  </tr>
+                );
+              })}
+              {inventory.length === 0 && (
+                <tr className="border-t border-white/10">
+                  <td className="px-4 py-4 text-white/50" colSpan={5}>
+                    No inventory items yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

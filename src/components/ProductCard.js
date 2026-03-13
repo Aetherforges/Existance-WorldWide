@@ -13,27 +13,54 @@ export default function ProductCard({ product }) {
 
   return (
     <>
-      <motion.button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="group text-left"
-        whileHover={{ y: -6 }}
+      <motion.div
+        className="rounded-xl border border-white/10 bg-[#111111] p-4 shadow-md"
+        whileHover={{ y: -4 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#111111]">
-          <Image
-            src={product.images?.[0] ?? "/products/p1.svg"}
-            alt={product.name}
-            width={640}
-            height={520}
-            className="h-52 w-full object-cover transition duration-500 group-hover:scale-105"
-          />
-        </div>
-        <div className="mt-4">
-          <h3 className="text-sm uppercase tracking-[0.2em]">{product.name}</h3>
-          <p className="text-white/60 text-sm">{formatCurrency(product.price)}</p>
-        </div>
-      </motion.button>
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="group w-full text-left"
+        >
+          <div className="relative overflow-hidden rounded-xl">
+            <Image
+              src={product.images?.[0] ?? "/products/p1.svg"}
+              alt={product.name}
+              width={640}
+              height={520}
+              className="h-52 w-full object-cover transition duration-500 group-hover:scale-105"
+            />
+            {product.stock === 0 && (
+              <span className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-black">
+                Out of Stock
+              </span>
+            )}
+          </div>
+          <div className="mt-4 space-y-1">
+            <h3 className="text-sm uppercase tracking-[0.2em]">{product.name}</h3>
+            <p className="text-white/60 text-sm">
+              {formatCurrency(product.price)}
+            </p>
+            <p className="text-xs text-white/50">
+              Stock: {product.stock ?? 0}
+            </p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          disabled={product.stock === 0}
+          onClick={() => addItem(product, 1)}
+          className={`mt-4 w-full rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition ${
+            product.stock === 0
+              ? "cursor-not-allowed bg-white/10 text-white/40"
+              : "bg-white text-black hover:shadow-[0_0_25px_rgba(255,255,255,0.4)]"
+          }`}
+        >
+          Add To Cart
+        </button>
+      </motion.div>
 
       <AnimatePresence>
         {open && (
@@ -64,10 +91,15 @@ export default function ProductCard({ product }) {
                   <p className="mt-6 text-xl">{formatCurrency(product.price)}</p>
                   <button
                     type="button"
+                    disabled={product.stock === 0}
                     onClick={() => addItem(product, 1)}
-                    className="mt-8 rounded-full bg-white px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-black transition hover:shadow-[0_0_25px_rgba(255,255,255,0.4)]"
+                    className={`mt-8 rounded-full px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] transition ${
+                      product.stock === 0
+                        ? "cursor-not-allowed bg-white/10 text-white/40"
+                        : "bg-white text-black hover:shadow-[0_0_25px_rgba(255,255,255,0.4)]"
+                    }`}
                   >
-                    Add To Cart
+                    {product.stock === 0 ? "Out of Stock" : "Add To Cart"}
                   </button>
                 </div>
               </div>

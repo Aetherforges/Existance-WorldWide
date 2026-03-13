@@ -111,6 +111,17 @@ export default function Checkout() {
           quantity: item.quantity,
         }));
         await supabase.from("order_items").insert(orderItems);
+
+        await Promise.all(
+          items.map((item) =>
+            supabase
+              .from("products")
+              .update({
+                stock: Math.max(0, (item.stock ?? 0) - item.quantity),
+              })
+              .eq("id", item.id)
+          )
+        );
       }
 
       clearCart();

@@ -25,6 +25,7 @@ export function CartProvider({ children }) {
   }, [items]);
 
   const addItem = (product, quantity = 1) => {
+    if (product?.stock === 0) return;
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {

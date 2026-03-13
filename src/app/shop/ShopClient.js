@@ -57,11 +57,13 @@ export default function ShopClient() {
           <p className="text-sm text-white/60">
             {loading
               ? "Loading"
-              : `${products.length} piece${products.length === 1 ? "" : "s"}`}
+              : `${filteredProducts.length} piece${
+                  filteredProducts.length === 1 ? "" : "s"
+                }`}
           </p>
         </div>
 
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
