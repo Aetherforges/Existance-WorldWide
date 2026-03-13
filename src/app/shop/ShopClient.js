@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import ProductCard from "../../components/ProductCard";
 import { supabase } from "../../lib/supabaseClient";
-import { sampleProducts } from "../../lib/sampleProducts";
 
 export default function ShopClient() {
   const [allProducts, setAllProducts] = useState([]);
@@ -24,9 +23,9 @@ export default function ShopClient() {
 
       if (!active) return;
       if (error || !data) {
-        setAllProducts(sampleProducts);
+        setAllProducts([]);
       } else {
-        setAllProducts(data.length ? data : sampleProducts);
+        setAllProducts(data);
       }
       setLoading(false);
     }
