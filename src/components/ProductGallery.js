@@ -1,0 +1,49 @@
+"use client";
+
+import Image from "next/image";
+
+import { useState } from "react";
+
+export default function ProductGallery({ images = [] }) {
+  const [active, setActive] = useState(images[0]);
+
+  if (images.length === 0) {
+    return (
+      <div className="flex h-72 items-center justify-center rounded-2xl border border-white/10 bg-white/5">
+        <span className="text-white/50">No image</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Image
+        src={active}
+        alt="Product view"
+        width={720}
+        height={520}
+        className="h-72 w-full rounded-2xl border border-white/10 object-cover"
+      />
+      <div className="flex gap-3">
+        {images.slice(0, 5).map((image) => (
+          <button
+            key={image}
+            type="button"
+            className={`h-14 w-14 overflow-hidden rounded-xl border ${
+              active === image ? "border-white" : "border-white/10"
+            }`}
+            onClick={() => setActive(image)}
+          >
+            <Image
+              src={image}
+              alt="Thumbnail"
+              width={112}
+              height={112}
+              className="h-full w-full object-cover"
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}

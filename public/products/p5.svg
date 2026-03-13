@@ -1,0 +1,6 @@
+<svg width="800" height="900" viewBox="0 0 800 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="900" fill="#080808"/>
+  <rect x="100" y="180" width="600" height="540" rx="120" fill="#111111"/>
+  <circle cx="400" cy="450" r="140" stroke="#2A2A2A" stroke-width="18"/>
+  <text x="400" y="455" fill="#FFFFFF" font-size="26" font-family="Manrope, sans-serif" text-anchor="middle" letter-spacing="8">RIDGE</text>
+</svg>

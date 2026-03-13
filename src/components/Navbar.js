@@ -1,0 +1,75 @@
+"use client";
+
+import Link from "next/link";
+import { ShoppingCart, UserRound, LogIn, ChevronDown } from "lucide-react";
+import { useCart } from "../context/CartContext";
+
+export default function Navbar() {
+  const { items, openCart } = useCart();
+  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+  const categories = [
+    "Earrings",
+    "Earrings Bundle",
+    "Tank Tops",
+    "Pefumes",
+    "Watches",
+    "Pandora",
+    "Pods",
+    "Pro Clubs",
+    "Skirts",
+    "Dress",
+  ];
+
+  return (
+    <header className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/10">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <Link href="/shop" className="font-display text-lg tracking-[0.4em]">
+          EXIST WORLD WIDE
+        </Link>
+        <nav className="flex items-center gap-6 text-sm uppercase tracking-[0.2em]">
+          <div className="group relative">
+            <button
+              type="button"
+              className="flex items-center gap-2 hover:text-white/70"
+            >
+              Shop
+              <ChevronDown size={16} />
+            </button>
+            <div className="absolute left-0 top-full hidden w-56 rounded-2xl border border-white/10 bg-[#111111] p-3 text-xs uppercase tracking-[0.25em] shadow-2xl group-hover:block">
+              {categories.map((category) => (
+                <Link
+                  key={category}
+                  href={`/shop?category=${encodeURIComponent(category)}`}
+                  className="block rounded-lg px-3 py-2 hover:bg-white/10"
+                >
+                  {category}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <Link href="/login" className="flex items-center gap-2 hover:text-white/70">
+            <LogIn size={18} />
+            Login
+          </Link>
+          <Link href="/account" className="flex items-center gap-2 hover:text-white/70">
+            <UserRound size={18} />
+            Account
+          </Link>
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative flex items-center gap-2 hover:text-white/70"
+            aria-label="Open cart"
+          >
+            <ShoppingCart size={20} />
+            {count > 0 && (
+              <span className="absolute -top-2 -right-3 rounded-full bg-white px-2 py-0.5 text-xs text-black">
+                {count}
+              </span>
+            )}
+          </button>
+        </nav>
+      </div>
+    </header>
+  );
+}

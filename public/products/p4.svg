@@ -1,0 +1,7 @@
+<svg width="800" height="900" viewBox="0 0 800 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="900" fill="#050505"/>
+  <rect x="90" y="150" width="620" height="600" rx="40" fill="#111111" stroke="#1E1E1E"/>
+  <path d="M160 250L640 650" stroke="#2A2A2A" stroke-width="10"/>
+  <path d="M640 250L160 650" stroke="#2A2A2A" stroke-width="10"/>
+  <text x="400" y="500" fill="#FFFFFF" font-size="30" font-family="Playfair Display, serif" text-anchor="middle" letter-spacing="10">CORE</text>
+</svg>

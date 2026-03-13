@@ -1,0 +1,6 @@
+<svg width="800" height="900" viewBox="0 0 800 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="900" fill="#0B0B0B"/>
+  <rect x="80" y="120" width="640" height="660" rx="40" fill="#111111" stroke="#2A2A2A"/>
+  <text x="400" y="430" fill="#FFFFFF" font-size="42" font-family="Playfair Display, serif" text-anchor="middle" letter-spacing="12">EXIST</text>
+  <text x="400" y="490" fill="#7A7A7A" font-size="18" font-family="Manrope, sans-serif" text-anchor="middle" letter-spacing="6">WORLD WIDE</text>
+</svg>
