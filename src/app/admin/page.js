@@ -20,27 +20,50 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [customerCount, setCustomerCount] = useState(0);
   const [inventory, setInventory] = useState([]);
+  const [orderItems, setOrderItems] = useState([]);
+  const [range, setRange] = useState(() => {
+    const today = new Date();
+    const start = new Date();
+    start.setDate(today.getDate() - 30);
+    return {
+      from: start.toISOString().slice(0, 10),
+      to: today.toISOString().slice(0, 10),
+    };
+  });
 
   useEffect(() => {
     let active = true;
     async function load() {
       const { data } = await supabase
         .from("orders")
-        .select("id,total,status,created_at")
+        .select("id,total,status,created_at,customer_id,shipping_name,phone")
         .order("created_at", { ascending: false });
       if (!active) return;
       setOrders(data ?? []);
-      const { count } = await supabase
-        .from("customers")
-        .select("id", { count: "exact", head: true });
       if (!active) return;
-      setCustomerCount(count ?? 0);
+      const uniqueCustomers = new Set();
+      (data ?? []).forEach((order) => {
+        if (order.customer_id) {
+          uniqueCustomers.add(`id:${order.customer_id}`);
+        } else if (order.shipping_name || order.phone) {
+          uniqueCustomers.add(
+            `guest:${order.shipping_name || ""}:${order.phone || ""}`.toLowerCase()
+          );
+        }
+      });
+      setCustomerCount(uniqueCustomers.size);
       const { data: products } = await supabase
         .from("products")
-        .select("id,name,category,price,stock")
+        .select("id,name,category,price,stock,cost")
         .order("created_at", { ascending: false });
       if (!active) return;
       setInventory(products ?? []);
+
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select("order_id,product_id,quantity,price,products(cost)");
+      if (!active) return;
+      setOrderItems(orderItems ?? []);
     }
     load();
     return () => {
@@ -53,14 +76,109 @@ export default function AdminDashboard() {
     const revenue = orders.reduce((sum, order) => sum + (order.total ?? 0), 0);
     const pending = orders.filter((order) => order.status === "Pending").length;
     const delivered = orders.filter((order) => order.status === "Delivered").length;
-    return { totalOrders, revenue, pending, delivered };
-  }, [orders]);
+    const costTotal = (orderItems ?? []).reduce((sum, item) => {
+      const cost = item.products?.cost ?? 0;
+      return sum + cost * (item.quantity ?? 0);
+    }, 0);
+    const profit = revenue - costTotal;
+    return { totalOrders, revenue, pending, delivered, costTotal, profit };
+  }, [orders, orderItems]);
 
-  const dailyLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  const dailyData = [12, 18, 10, 24, 22, 16, 30];
+  const filteredOrders = useMemo(() => {
+    const fromDate = new Date(range.from);
+    const toDate = new Date(range.to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      return orders;
+    }
+    toDate.setHours(23, 59, 59, 999);
+    return orders.filter((order) => {
+      if (!order.created_at) return false;
+      const created = new Date(order.created_at);
+      return created >= fromDate && created <= toDate;
+    });
+  }, [orders, range.from, range.to]);
 
-  const monthlyLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-  const monthlyData = [120, 180, 260, 210, 300, 380];
+  const dailyLabels = useMemo(() => {
+    const days = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i -= 1) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      days.push(date);
+    }
+    return days.map((date) =>
+      date.toLocaleDateString("en-US", { weekday: "short" })
+    );
+  }, []);
+
+  const dailyData = useMemo(() => {
+    const now = new Date();
+    const totals = new Array(7).fill(0);
+    filteredOrders.forEach((order) => {
+      if (!order.created_at) return;
+      const created = new Date(order.created_at);
+      const diff = Math.floor(
+        (now.setHours(0, 0, 0, 0) - created.setHours(0, 0, 0, 0)) /
+          (1000 * 60 * 60 * 24)
+      );
+      if (diff >= 0 && diff < 7) {
+        const idx = 6 - diff;
+        totals[idx] += order.total ?? 0;
+      }
+    });
+    return totals;
+  }, [filteredOrders]);
+
+  const monthlyLabels = useMemo(() => {
+    const labels = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i -= 1) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      labels.push(date.toLocaleDateString("en-US", { month: "short" }));
+    }
+    return labels;
+  }, []);
+
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    const totals = new Array(6).fill(0);
+    filteredOrders.forEach((order) => {
+      if (!order.created_at) return;
+      const created = new Date(order.created_at);
+      const monthDiff =
+        (now.getFullYear() - created.getFullYear()) * 12 +
+        (now.getMonth() - created.getMonth());
+      if (monthDiff >= 0 && monthDiff < 6) {
+        const idx = 5 - monthDiff;
+        totals[idx] += order.total ?? 0;
+      }
+    });
+    return totals;
+  }, [filteredOrders]);
+
+  const yearlyLabels = useMemo(() => {
+    const labels = [];
+    const now = new Date();
+    for (let i = 4; i >= 0; i -= 1) {
+      labels.push(String(now.getFullYear() - i));
+    }
+    return labels;
+  }, []);
+
+  const yearlyData = useMemo(() => {
+    const now = new Date();
+    const totals = new Array(5).fill(0);
+    filteredOrders.forEach((order) => {
+      if (!order.created_at) return;
+      const created = new Date(order.created_at);
+      const diff = now.getFullYear() - created.getFullYear();
+      if (diff >= 0 && diff < 5) {
+        const idx = 4 - diff;
+        totals[idx] += order.total ?? 0;
+      }
+    });
+    return totals;
+  }, [filteredOrders]);
 
   function AnimatedNumber({ value, formatter }) {
     const [displayValue, setDisplayValue] = useState(0);
@@ -97,6 +215,31 @@ export default function AdminDashboard() {
         <h1 className="font-display text-3xl tracking-[0.2em]">Analytics</h1>
       </div>
 
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/10 bg-[#111111] p-4">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/50">Date Range</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="date"
+            value={range.from}
+            onChange={(event) =>
+              setRange((prev) => ({ ...prev, from: event.target.value }))
+            }
+            className="rounded-full bg-black px-4 py-2 text-xs uppercase tracking-[0.3em] text-white ring-1 ring-white/10 focus:ring-white/40"
+          />
+          <input
+            type="date"
+            value={range.to}
+            onChange={(event) =>
+              setRange((prev) => ({ ...prev, to: event.target.value }))
+            }
+            className="rounded-full bg-black px-4 py-2 text-xs uppercase tracking-[0.3em] text-white ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <p className="text-xs text-white/50">
+          Showing {filteredOrders.length} orders
+        </p>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-3">
         <motion.div
           className="rounded-2xl border border-white/10 bg-[#111111] p-6"
@@ -115,7 +258,7 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
         >
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Revenue</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Total Sales</p>
           <div className="mt-4">
             <AnimatedNumber value={metrics.revenue} formatter={formatCurrency} />
           </div>
@@ -126,7 +269,9 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Customers</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">
+            Customers Ordered
+          </p>
           <div className="mt-4">
             <AnimatedNumber value={customerCount} />
           </div>
@@ -153,6 +298,28 @@ export default function AdminDashboard() {
             <AnimatedNumber value={metrics.delivered} />
           </div>
         </motion.div>
+        <motion.div
+          className="rounded-2xl border border-white/10 bg-[#111111] p-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.25 }}
+        >
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Total Cost</p>
+          <div className="mt-4">
+            <AnimatedNumber value={metrics.costTotal} formatter={formatCurrency} />
+          </div>
+        </motion.div>
+        <motion.div
+          className="rounded-2xl border border-white/10 bg-[#111111] p-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Profit</p>
+          <div className="mt-4">
+            <AnimatedNumber value={metrics.profit} formatter={formatCurrency} />
+          </div>
+        </motion.div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -161,6 +328,11 @@ export default function AdminDashboard() {
           title="Monthly Revenue"
           labels={monthlyLabels}
           data={monthlyData}
+        />
+        <AnalyticsChart
+          title="Yearly Revenue"
+          labels={yearlyLabels}
+          data={yearlyData}
         />
       </div>
 

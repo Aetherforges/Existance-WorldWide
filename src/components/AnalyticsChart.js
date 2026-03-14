@@ -14,16 +14,34 @@ import { Line } from "react-chartjs-2";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 export default function AnalyticsChart({ title, labels, data }) {
+  const accent = "#22c55e";
+  const down = "#ef4444";
+  const fill = "rgba(255,255,255,0.08)";
+
   const chartData = {
     labels,
     datasets: [
       {
         label: title,
         data,
-        borderColor: "#FFFFFF",
-        backgroundColor: "rgba(255,255,255,0.1)",
+        borderColor: accent,
+        backgroundColor: fill,
         tension: 0.4,
         fill: true,
+        segment: {
+          borderColor: (ctx) => {
+            const prev = ctx.p0.parsed.y;
+            const next = ctx.p1.parsed.y;
+            return next >= prev ? accent : down;
+          },
+        },
+        pointBackgroundColor: (ctx) => {
+          const idx = ctx.dataIndex;
+          if (idx === 0) return accent;
+          const prev = ctx.dataset.data[idx - 1] ?? 0;
+          const current = ctx.dataset.data[idx] ?? 0;
+          return current >= prev ? accent : down;
+        },
       },
     ],
   };
