@@ -38,6 +38,7 @@ export default function AdminProducts() {
   const [error, setError] = useState("");
   const [bulkStocks, setBulkStocks] = useState({});
   const [bulkPrices, setBulkPrices] = useState({});
+  const [bulkCosts, setBulkCosts] = useState({});
 
   async function fetchProducts() {
     const { data } = await supabase
@@ -59,6 +60,15 @@ export default function AdminProducts() {
       (data ?? []).forEach((product) => {
         if (next[product.id] === undefined || next[product.id] === null) {
           next[product.id] = product.price ?? 0;
+        }
+      });
+      return next;
+    });
+    setBulkCosts((prev) => {
+      const next = { ...prev };
+      (data ?? []).forEach((product) => {
+        if (next[product.id] === undefined || next[product.id] === null) {
+          next[product.id] = product.cost ?? 0;
         }
       });
       return next;
@@ -205,15 +215,19 @@ export default function AdminProducts() {
         id: product.id,
         stock: Number(bulkStocks[product.id]),
         price: Number(bulkPrices[product.id]),
+        cost: Number(bulkCosts[product.id]),
         current: product.stock ?? 0,
         currentPrice: product.price ?? 0,
+        currentCost: product.cost ?? 0,
       }))
       .filter((item) => {
         const stockChanged =
           Number.isFinite(item.stock) && item.stock !== item.current;
         const priceChanged =
           Number.isFinite(item.price) && item.price !== item.currentPrice;
-        return stockChanged || priceChanged;
+        const costChanged =
+          Number.isFinite(item.cost) && item.cost !== item.currentCost;
+        return stockChanged || priceChanged || costChanged;
       });
 
     if (updates.length === 0) {
@@ -229,6 +243,7 @@ export default function AdminProducts() {
             .update({
               stock: Number.isFinite(item.stock) ? item.stock : item.current,
               price: Number.isFinite(item.price) ? item.price : item.currentPrice,
+              cost: Number.isFinite(item.cost) ? item.cost : item.currentCost,
             })
             .eq("id", item.id)
         )
@@ -440,7 +455,7 @@ export default function AdminProducts() {
             </button>
           </div>
           <p className="mt-3 text-xs text-white/50">
-            Update multiple product stocks and prices at once. Only changed values are saved.
+            Update multiple product stocks, prices, and costs at once. Only changed values are saved.
           </p>
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -451,6 +466,8 @@ export default function AdminProducts() {
                   <th className="px-4 py-3">New Stock</th>
                   <th className="px-4 py-3">Current Price</th>
                   <th className="px-4 py-3">New Price</th>
+                  <th className="px-4 py-3">Current Cost</th>
+                  <th className="px-4 py-3">New Cost</th>
                 </tr>
               </thead>
               <tbody>
@@ -483,6 +500,24 @@ export default function AdminProducts() {
                         value={bulkPrices[product.id] ?? ""}
                         onChange={(event) =>
                           setBulkPrices((prev) => ({
+                            ...prev,
+                            [product.id]: event.target.value,
+                          }))
+                        }
+                        className="w-32 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatCurrency(product.cost ?? 0)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={bulkCosts[product.id] ?? ""}
+                        onChange={(event) =>
+                          setBulkCosts((prev) => ({
                             ...prev,
                             [product.id]: event.target.value,
                           }))

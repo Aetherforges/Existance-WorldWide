@@ -1,6 +1,5 @@
 import "./globals.css";
 import { Playfair_Display, Manrope } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import Providers from "../components/Providers";
 import Footer from "../components/Footer";
 
@@ -27,7 +26,6 @@ export default function RootLayout({ children }) {
           {children}
           <Footer />
         </Providers>
-        <Analytics />
       </body>
     </html>
   );
