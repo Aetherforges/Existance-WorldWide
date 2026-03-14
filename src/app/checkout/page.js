@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "../../components/Navbar";
 import { useCart } from "../../context/CartContext";
-import { supabase } from "../../lib/supabaseClient";
 import { formatCurrency } from "../../lib/format";
 import { useAuth } from "../../context/AuthContext";
-import { createUniqueOrderNumber } from "../../lib/orderNumber";
 
 const deliveryOptions = ["J&T", "Lalamove", "Pickup"];
 
@@ -92,108 +90,38 @@ export default function Checkout() {
     }
 
     try {
-      const placedItems = items.map((item) => ({ ...item }));
-      const orderNumber = await createUniqueOrderNumber(supabase);
-
-      let customerId = null;
-      if (form.email) {
-        const { data: existing } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("email", form.email)
-          .maybeSingle();
-
-        if (existing?.id) {
-          customerId = existing.id;
-        } else {
-          const { data: newCustomer } = await supabase
-            .from("customers")
-            .insert({ email: form.email })
-            .select("id")
-            .single();
-          customerId = newCustomer?.id;
-        }
-      }
-
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          customer_id: customerId,
-          total,
-          order_number: orderNumber,
-          status: "Pending",
+      const response = await fetch("/api/order/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            product_id: item.id,
+            quantity: item.quantity,
+          })),
+          customer: {
+            email: form.email || null,
+          },
+          shipping: {
+            name: form.name,
+            phone: form.phone,
+            address: form.address,
+          },
           delivery_method: form.delivery,
-          shipping_name: form.name,
-          phone: form.phone,
-          address: form.address,
-        })
-        .select("id,order_number")
-        .single();
+          delivery_option: form.delivery,
+        }),
+      });
 
-      let createdOrder = order;
-      if (orderError) {
-        if (orderError.code === "23505") {
-          const retryNumber = await createUniqueOrderNumber(supabase);
-          const { data: retryOrder, error: retryError } = await supabase
-            .from("orders")
-            .insert({
-              customer_id: customerId,
-              total,
-              order_number: retryNumber,
-              status: "Pending",
-              delivery_method: form.delivery,
-              shipping_name: form.name,
-              phone: form.phone,
-              address: form.address,
-            })
-            .select("id,order_number")
-            .single();
-          if (retryError) throw retryError;
-          createdOrder = retryOrder;
-        } else {
-          throw orderError;
-        }
-      }
-
-      if (createdOrder?.id) {
-        const orderItems = items.map((item) => ({
-          order_id: createdOrder.id,
-          product_id: item.id,
-          quantity: item.quantity,
-        }));
-        await supabase.from("order_items").insert(orderItems);
-
-        const { data: stockRows } = await supabase
-          .from("products")
-          .select("id,stock")
-          .in(
-            "id",
-            items.map((item) => item.id)
-          );
-        const stockMap = new Map(
-          (stockRows ?? []).map((row) => [row.id, row.stock ?? 0])
-        );
-
-        await Promise.all(
-          items.map((item) => {
-            const currentStock =
-              stockMap.get(item.id) ?? (item.stock ?? 0);
-            return supabase
-              .from("products")
-              .update({
-                stock: Math.max(0, currentStock - item.quantity),
-              })
-              .eq("id", item.id);
-          })
-        );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.message || "Unable to place order.");
       }
 
       setOrderSummary({
-        orderNumber: createdOrder?.order_number ?? orderNumber,
-        items: placedItems,
-        total,
-        delivery: form.delivery,
-        customer: {
+        orderNumber: payload?.order_number,
+        items: payload?.summary?.items ?? items,
+        total: payload?.summary?.total ?? total,
+        delivery: payload?.summary?.delivery_method ?? form.delivery,
+        customer: payload?.summary?.customer ?? {
           name: form.name,
           phone: form.phone,
           address: form.address,
@@ -203,7 +131,7 @@ export default function Checkout() {
       clearCart();
       setMessage("Order placed successfully.");
     } catch (err) {
-      setError("Unable to place order. Please try again.");
+      setError(err?.message || "Unable to place order. Please try again.");
     }
 
     setLoading(false);
