@@ -8,6 +8,7 @@ const emptyProduct = {
   id: null,
   name: "",
   description: "",
+  price: "",
   retail_price: "",
   regular_price: "",
   wholesale_price: "",
@@ -45,6 +46,18 @@ export default function AdminProducts() {
   const [bulkStocks, setBulkStocks] = useState({});
   const [bulkPrices, setBulkPrices] = useState({});
   const [bulkCosts, setBulkCosts] = useState({});
+  const [categoryPricing, setCategoryPricing] = useState({
+    category: "",
+    retail_price: "",
+    regular_price: "",
+    wholesale_price: "",
+    bulk_price: "",
+    regular_min_qty: 10,
+    wholesale_min_qty: 50,
+    bulk_min_qty: 100,
+  });
+  const [categoryPricingMessage, setCategoryPricingMessage] = useState("");
+  const [categoryPricingLoading, setCategoryPricingLoading] = useState(false);
 
   async function fetchProducts() {
     const { data } = await supabase
@@ -84,6 +97,47 @@ export default function AdminProducts() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    if (!categoryPricing.category) return;
+    const match = products.find(
+      (product) => product.category === categoryPricing.category
+    );
+    if (!match) {
+      setCategoryPricing((prev) => ({
+        ...prev,
+        retail_price: "",
+        regular_price: "",
+        wholesale_price: "",
+        bulk_price: "",
+        regular_min_qty: 10,
+        wholesale_min_qty: 50,
+        bulk_min_qty: 100,
+      }));
+      return;
+    }
+    setCategoryPricing((prev) => ({
+      ...prev,
+      retail_price: match.retail_price ?? match.price ?? 0,
+      regular_price: match.regular_price ?? match.retail_price ?? match.price ?? 0,
+      wholesale_price:
+        match.wholesale_price ??
+        match.regular_price ??
+        match.retail_price ??
+        match.price ??
+        0,
+      bulk_price:
+        match.bulk_price ??
+        match.wholesale_price ??
+        match.regular_price ??
+        match.retail_price ??
+        match.price ??
+        0,
+      regular_min_qty: match.regular_min_qty ?? 10,
+      wholesale_min_qty: match.wholesale_min_qty ?? 50,
+      bulk_min_qty: match.bulk_min_qty ?? 100,
+    }));
+  }, [categoryPricing.category, products]);
 
   useEffect(() => {
     if (!files || Array.from(files).length === 0) {
@@ -147,7 +201,10 @@ export default function AdminProducts() {
       setLoading(false);
       return;
     }
-    const retailPrice = Number(form.retail_price);
+    const basePrice = Number(form.price);
+    const retailPrice = Number.isFinite(Number(form.retail_price))
+      ? Number(form.retail_price)
+      : basePrice;
     const regularPrice = Number.isFinite(Number(form.regular_price))
       ? Number(form.regular_price)
       : retailPrice;
@@ -160,7 +217,7 @@ export default function AdminProducts() {
     const payload = {
       name: form.name,
       description: form.description,
-      price: Number.isFinite(retailPrice) ? retailPrice : 0,
+      price: Number.isFinite(retailPrice) ? retailPrice : basePrice || 0,
       retail_price: Number.isFinite(retailPrice) ? retailPrice : 0,
       regular_price: Number.isFinite(regularPrice) ? regularPrice : 0,
       wholesale_price: Number.isFinite(wholesalePrice) ? wholesalePrice : 0,
@@ -215,6 +272,7 @@ export default function AdminProducts() {
       id: product.id,
       name: product.name,
       description: product.description,
+      price: retail,
       retail_price: retail,
       regular_price: regular,
       wholesale_price: wholesale,
@@ -290,6 +348,44 @@ export default function AdminProducts() {
     }
   }
 
+  async function handleCategoryPricingSave() {
+    setCategoryPricingMessage("");
+    if (!categoryPricing.category) {
+      setError("Select a category to update tier pricing.");
+      return;
+    }
+    setError("");
+    setCategoryPricingLoading(true);
+    const retailPrice = Number(categoryPricing.retail_price);
+    const regularPrice = Number(categoryPricing.regular_price ?? retailPrice);
+    const wholesalePrice = Number(categoryPricing.wholesale_price ?? regularPrice);
+    const bulkPrice = Number(categoryPricing.bulk_price ?? wholesalePrice);
+
+    const { error: updateError } = await supabase
+      .from("products")
+      .update({
+        price: Number.isFinite(retailPrice) ? retailPrice : 0,
+        retail_price: Number.isFinite(retailPrice) ? retailPrice : 0,
+        regular_price: Number.isFinite(regularPrice) ? regularPrice : 0,
+        wholesale_price: Number.isFinite(wholesalePrice) ? wholesalePrice : 0,
+        bulk_price: Number.isFinite(bulkPrice) ? bulkPrice : 0,
+        regular_min_qty: Number(categoryPricing.regular_min_qty) || 10,
+        wholesale_min_qty: Number(categoryPricing.wholesale_min_qty) || 50,
+        bulk_min_qty: Number(categoryPricing.bulk_min_qty) || 100,
+      })
+      .eq("category", categoryPricing.category);
+
+    if (updateError) {
+      setError(updateError.message || "Unable to update category pricing.");
+      setCategoryPricingLoading(false);
+      return;
+    }
+
+    setCategoryPricingMessage("Category pricing updated.");
+    setCategoryPricingLoading(false);
+    await fetchProducts();
+  }
+
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -348,49 +444,13 @@ export default function AdminProducts() {
         </div>
         <div>
           <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Retail Price
+            Price
           </label>
           <input
             type="number"
             required
-            value={form.retail_price}
-            onChange={handleChange("retail_price")}
-            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Regular Price
-          </label>
-          <input
-            type="number"
-            required
-            value={form.regular_price}
-            onChange={handleChange("regular_price")}
-            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Wholesale Price
-          </label>
-          <input
-            type="number"
-            required
-            value={form.wholesale_price}
-            onChange={handleChange("wholesale_price")}
-            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Bulk Price
-          </label>
-          <input
-            type="number"
-            required
-            value={form.bulk_price}
-            onChange={handleChange("bulk_price")}
+            value={form.price}
+            onChange={handleChange("price")}
             className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
           />
         </div>
@@ -401,45 +461,6 @@ export default function AdminProducts() {
             required
             value={form.cost}
             onChange={handleChange("cost")}
-            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Regular Minimum Qty
-          </label>
-          <input
-            type="number"
-            min="1"
-            required
-            value={form.regular_min_qty}
-            onChange={handleChange("regular_min_qty")}
-            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Wholesale Minimum Qty
-          </label>
-          <input
-            type="number"
-            min="1"
-            required
-            value={form.wholesale_min_qty}
-            onChange={handleChange("wholesale_min_qty")}
-            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
-          />
-        </div>
-        <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
-            Bulk Minimum Qty
-          </label>
-          <input
-            type="number"
-            min="1"
-            required
-            value={form.bulk_min_qty}
-            onChange={handleChange("bulk_min_qty")}
             className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
           />
         </div>
@@ -549,99 +570,271 @@ export default function AdminProducts() {
       </form>
 
       {products.length > 0 && (
-        <div className="rounded-3xl border border-white/10 bg-[#111111] p-6 md:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                Inventory
-              </p>
-              <h2 className="font-display text-2xl tracking-[0.2em]">
-                Bulk Stock & Price Update
-              </h2>
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-white/10 bg-[#111111] p-6 md:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Inventory
+                </p>
+                <h2 className="font-display text-2xl tracking-[0.2em]">
+                  Bulk Stock & Price Update
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={handleBulkSave}
+                className="glow-button rounded-full bg-white px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-black"
+              >
+                Save All Changes
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleBulkSave}
-              className="glow-button rounded-full bg-white px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-black"
-            >
-              Save All Changes
-            </button>
-          </div>
-          <p className="mt-3 text-xs text-white/50">
-            Update multiple product stocks, prices, and costs at once. Only changed values are saved.
-          </p>
-          <div className="mt-6 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.3em] text-white/60">
-                <tr>
-                  <th className="px-4 py-3">Product</th>
-                  <th className="px-4 py-3">Current</th>
-                  <th className="px-4 py-3">New Stock</th>
-                  <th className="px-4 py-3">Current Price</th>
-                  <th className="px-4 py-3">New Price</th>
-                  <th className="px-4 py-3">Current Cost</th>
-                  <th className="px-4 py-3">New Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id} className="border-t border-white/10">
-                    <td className="px-4 py-3">{product.name}</td>
-                    <td className="px-4 py-3">{product.stock ?? 0}</td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        value={bulkStocks[product.id] ?? ""}
-                        onChange={(event) =>
-                          setBulkStocks((prev) => ({
-                            ...prev,
-                            [product.id]: event.target.value,
-                          }))
-                        }
-                        className="w-28 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatCurrency(product.retail_price ?? product.price ?? 0)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={bulkPrices[product.id] ?? ""}
-                        onChange={(event) =>
-                          setBulkPrices((prev) => ({
-                            ...prev,
-                            [product.id]: event.target.value,
-                          }))
-                        }
-                        className="w-32 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      {formatCurrency(product.cost ?? 0)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={bulkCosts[product.id] ?? ""}
-                        onChange={(event) =>
-                          setBulkCosts((prev) => ({
-                            ...prev,
-                            [product.id]: event.target.value,
-                          }))
-                        }
-                        className="w-32 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
-                      />
-                    </td>
+            <p className="mt-3 text-xs text-white/50">
+              Update multiple product stocks, prices, and costs at once. Only changed
+              values are saved.
+            </p>
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  <tr>
+                    <th className="px-4 py-3">Product</th>
+                    <th className="px-4 py-3">Current</th>
+                    <th className="px-4 py-3">New Stock</th>
+                    <th className="px-4 py-3">Current Price</th>
+                    <th className="px-4 py-3">New Price</th>
+                    <th className="px-4 py-3">Current Cost</th>
+                    <th className="px-4 py-3">New Cost</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.id} className="border-t border-white/10">
+                      <td className="px-4 py-3">{product.name}</td>
+                      <td className="px-4 py-3">{product.stock ?? 0}</td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min="0"
+                          value={bulkStocks[product.id] ?? ""}
+                          onChange={(event) =>
+                            setBulkStocks((prev) => ({
+                              ...prev,
+                              [product.id]: event.target.value,
+                            }))
+                          }
+                          className="w-28 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatCurrency(product.retail_price ?? product.price ?? 0)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={bulkPrices[product.id] ?? ""}
+                          onChange={(event) =>
+                            setBulkPrices((prev) => ({
+                              ...prev,
+                              [product.id]: event.target.value,
+                            }))
+                          }
+                          className="w-32 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatCurrency(product.cost ?? 0)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={bulkCosts[product.id] ?? ""}
+                          onChange={(event) =>
+                            setBulkCosts((prev) => ({
+                              ...prev,
+                              [product.id]: event.target.value,
+                            }))
+                          }
+                          className="w-32 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[#111111] p-6 md:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Category Pricing
+                </p>
+                <h2 className="font-display text-2xl tracking-[0.2em]">
+                  Bulk Order Pricing by Category
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={handleCategoryPricingSave}
+                disabled={categoryPricingLoading}
+                className="glow-button rounded-full bg-white px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-black"
+              >
+                {categoryPricingLoading ? "Saving" : "Apply to Category"}
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-white/50">
+              Choose a category and set the tier prices + minimum quantities.
+            </p>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Category
+                </label>
+                <select
+                  value={categoryPricing.category}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      category: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                >
+                  <option value="">Select category</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Retail Price
+                </label>
+                <input
+                  type="number"
+                  value={categoryPricing.retail_price}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      retail_price: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Regular Price
+                </label>
+                <input
+                  type="number"
+                  value={categoryPricing.regular_price}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      regular_price: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Wholesale Price
+                </label>
+                <input
+                  type="number"
+                  value={categoryPricing.wholesale_price}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      wholesale_price: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Bulk Price
+                </label>
+                <input
+                  type="number"
+                  value={categoryPricing.bulk_price}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      bulk_price: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Regular Minimum Qty
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={categoryPricing.regular_min_qty}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      regular_min_qty: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Wholesale Minimum Qty
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={categoryPricing.wholesale_min_qty}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      wholesale_min_qty: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+              <div>
+                <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                  Bulk Minimum Qty
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={categoryPricing.bulk_min_qty}
+                  onChange={(event) =>
+                    setCategoryPricing((prev) => ({
+                      ...prev,
+                      bulk_min_qty: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+                />
+              </div>
+            </div>
+            {categoryPricingMessage && (
+              <p className="mt-4 text-sm text-emerald-300">
+                {categoryPricingMessage}
+              </p>
+            )}
           </div>
         </div>
       )}
