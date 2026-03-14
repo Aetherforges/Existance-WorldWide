@@ -36,6 +36,7 @@ export default function AdminProducts() {
   const [fileInputKey, setFileInputKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [bulkStocks, setBulkStocks] = useState({});
 
   async function fetchProducts() {
     const { data } = await supabase
@@ -43,6 +44,15 @@ export default function AdminProducts() {
       .select("*")
       .order("created_at", { ascending: false });
     setProducts(data ?? []);
+    setBulkStocks((prev) => {
+      const next = { ...prev };
+      (data ?? []).forEach((product) => {
+        if (next[product.id] === undefined || next[product.id] === null) {
+          next[product.id] = product.stock ?? 0;
+        }
+      });
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -176,6 +186,33 @@ export default function AdminProducts() {
       return;
     }
     setProducts((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  async function handleBulkSave() {
+    setError("");
+    const updates = products
+      .map((product) => ({
+        id: product.id,
+        stock: Number(bulkStocks[product.id]),
+        current: product.stock ?? 0,
+      }))
+      .filter((item) => Number.isFinite(item.stock) && item.stock !== item.current);
+
+    if (updates.length === 0) {
+      setError("No stock changes to save.");
+      return;
+    }
+
+    try {
+      await Promise.all(
+        updates.map((item) =>
+          supabase.from("products").update({ stock: item.stock }).eq("id", item.id)
+        )
+      );
+      await fetchProducts();
+    } catch (err) {
+      setError(err.message ?? "Bulk update failed.");
+    }
   }
 
   return (
@@ -358,6 +395,64 @@ export default function AdminProducts() {
           )}
         </div>
       </form>
+
+      {products.length > 0 && (
+        <div className="rounded-3xl border border-white/10 bg-[#111111] p-6 md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                Inventory
+              </p>
+              <h2 className="font-display text-2xl tracking-[0.2em]">
+                Bulk Stock Update
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={handleBulkSave}
+              className="glow-button rounded-full bg-white px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-black"
+            >
+              Save All Changes
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-white/50">
+            Update multiple product stocks at once. Only changed values are saved.
+          </p>
+          <div className="mt-6 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-[0.3em] text-white/60">
+                <tr>
+                  <th className="px-4 py-3">Product</th>
+                  <th className="px-4 py-3">Current</th>
+                  <th className="px-4 py-3">New Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id} className="border-t border-white/10">
+                    <td className="px-4 py-3">{product.name}</td>
+                    <td className="px-4 py-3">{product.stock ?? 0}</td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        min="0"
+                        value={bulkStocks[product.id] ?? ""}
+                        onChange={(event) =>
+                          setBulkStocks((prev) => ({
+                            ...prev,
+                            [product.id]: event.target.value,
+                          }))
+                        }
+                        className="w-28 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         {products.map((product) => (

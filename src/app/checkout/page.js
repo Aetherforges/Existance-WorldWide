@@ -24,6 +24,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [orderSummary, setOrderSummary] = useState(null);
+  const [showHowToOrder, setShowHowToOrder] = useState(false);
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -239,6 +240,13 @@ export default function Checkout() {
           <p className="mt-3 text-xs uppercase tracking-[0.25em] text-white/50">
             NOTE: PLEASE KEEP YOUR ORDER NUMBER FOR ORDER TRACKING
           </p>
+          <button
+            type="button"
+            onClick={() => setShowHowToOrder(true)}
+            className="mt-4 w-full rounded-full border border-white/30 px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-white/80 hover:text-white"
+          >
+            How to Order
+          </button>
         </form>
 
         <div className="rounded-3xl border border-white/10 bg-[#111111] p-8">
@@ -331,6 +339,52 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showHowToOrder && (
+          <motion.div
+            className="modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowHowToOrder(false)}
+          >
+            <motion.div
+              className="modal-panel relative w-[92vw] max-w-lg bg-[#111111]"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowHowToOrder(false)}
+                className="absolute right-4 top-4 text-white/60 transition hover:text-white"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                How to Order
+              </p>
+              <ul className="mt-4 max-h-64 list-disc space-y-2 overflow-y-auto pr-2 text-sm text-white/70 scrollbar-elegant">
+                <li>Fill out neccessary informations</li>
+                <li>Place order to update your order status</li>
+                <li>Copy the reciept</li>
+                <li>
+                  Click on send to Facebook manually for us to validate your order
+                </li>
+                <li>
+                  please be informed that order might be delayed de to longe queue
+                  of orders
+                </li>
+                <li>NOTE: Your patience is greatly appreciated _Admins</li>
+              </ul>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
