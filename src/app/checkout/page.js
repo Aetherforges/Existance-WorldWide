@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "../../components/Navbar";
 import { useCart } from "../../context/CartContext";
 import { formatCurrency } from "../../lib/format";
+import { calculateTierPrice } from "../../lib/pricing";
 import { useAuth } from "../../context/AuthContext";
 
 const deliveryOptions = ["J&T", "Lalamove", "Pickup"];
@@ -50,10 +51,15 @@ export default function Checkout() {
       `Delivery Option: ${summaryDelivery || "-"}`,
       "Items:",
       ...summaryItems.map(
-        (item) =>
-          `- ${item.name} | Qty ${item.quantity} | ${formatCurrency(
-            item.price * item.quantity
-          )}`
+        (item) => {
+          const unitPrice =
+            typeof item.price === "number"
+              ? item.price
+              : calculateTierPrice(item, item.quantity).price;
+          return `- ${item.name} | Qty ${item.quantity} | ${formatCurrency(
+            unitPrice * item.quantity
+          )}`;
+        }
       ),
       `Total: ${formatCurrency(summaryTotal)}`,
     ];
@@ -67,6 +73,18 @@ export default function Checkout() {
     summaryItems,
     summaryTotal,
   ]);
+
+  const summaryWithPrices = useMemo(
+    () =>
+      summaryItems.map((item) => {
+        const unitPrice =
+          typeof item.price === "number"
+            ? item.price
+            : calculateTierPrice(item, item.quantity).price;
+        return { ...item, unitPrice };
+      }),
+    [summaryItems]
+  );
 
   async function handleCopyReceipt() {
     try {
@@ -272,18 +290,18 @@ export default function Checkout() {
               </div>
 
               <div className="space-y-4">
-                {summaryItems.map((item) => (
+                {summaryWithPrices.map((item) => (
                   <div key={item.id} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm uppercase tracking-[0.2em]">
                         {item.name}
                       </p>
                       <p className="text-xs text-white/50">
-                        Qty {item.quantity} · {formatCurrency(item.price)}
+                        Qty {item.quantity} · {formatCurrency(item.unitPrice)}
                       </p>
                     </div>
                     <p className="text-sm">
-                      {formatCurrency(item.price * item.quantity)}
+                      {formatCurrency(item.unitPrice * item.quantity)}
                     </p>
                   </div>
                 ))}

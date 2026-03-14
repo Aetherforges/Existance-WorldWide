@@ -7,6 +7,13 @@ create table if not exists products (
   name text not null,
   description text not null,
   price numeric not null,
+  retail_price numeric,
+  regular_price numeric,
+  wholesale_price numeric,
+  bulk_price numeric,
+  regular_min_qty integer default 10,
+  wholesale_min_qty integer default 50,
+  bulk_min_qty integer default 100,
   cost numeric,
   category text,
   stock integer default 0,
@@ -41,6 +48,8 @@ create table if not exists order_items (
   id uuid primary key default uuid_generate_v4(),
   order_id uuid references orders(id) on delete cascade,
   product_id uuid references products(id) on delete set null,
+  product_name text,
+  price numeric,
   quantity integer not null default 1
 );
 

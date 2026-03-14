@@ -8,7 +8,13 @@ const emptyProduct = {
   id: null,
   name: "",
   description: "",
-  price: "",
+  retail_price: "",
+  regular_price: "",
+  wholesale_price: "",
+  bulk_price: "",
+  regular_min_qty: 10,
+  wholesale_min_qty: 50,
+  bulk_min_qty: 100,
   cost: "",
   category: "",
   stock: "",
@@ -59,7 +65,7 @@ export default function AdminProducts() {
       const next = { ...prev };
       (data ?? []).forEach((product) => {
         if (next[product.id] === undefined || next[product.id] === null) {
-          next[product.id] = product.price ?? 0;
+          next[product.id] = product.retail_price ?? product.price ?? 0;
         }
       });
       return next;
@@ -141,10 +147,27 @@ export default function AdminProducts() {
       setLoading(false);
       return;
     }
+    const retailPrice = Number(form.retail_price);
+    const regularPrice = Number.isFinite(Number(form.regular_price))
+      ? Number(form.regular_price)
+      : retailPrice;
+    const wholesalePrice = Number.isFinite(Number(form.wholesale_price))
+      ? Number(form.wholesale_price)
+      : regularPrice;
+    const bulkPrice = Number.isFinite(Number(form.bulk_price))
+      ? Number(form.bulk_price)
+      : wholesalePrice;
     const payload = {
       name: form.name,
       description: form.description,
-      price: Number(form.price),
+      price: Number.isFinite(retailPrice) ? retailPrice : 0,
+      retail_price: Number.isFinite(retailPrice) ? retailPrice : 0,
+      regular_price: Number.isFinite(regularPrice) ? regularPrice : 0,
+      wholesale_price: Number.isFinite(wholesalePrice) ? wholesalePrice : 0,
+      bulk_price: Number.isFinite(bulkPrice) ? bulkPrice : 0,
+      regular_min_qty: Number(form.regular_min_qty) || 10,
+      wholesale_min_qty: Number(form.wholesale_min_qty) || 50,
+      bulk_min_qty: Number(form.bulk_min_qty) || 100,
       cost: Number(form.cost),
       category: form.category,
       stock: Number(form.stock),
@@ -184,11 +207,21 @@ export default function AdminProducts() {
   }
 
   function handleEdit(product) {
+    const retail = product.retail_price ?? product.price ?? 0;
+    const regular = product.regular_price ?? retail;
+    const wholesale = product.wholesale_price ?? regular;
+    const bulk = product.bulk_price ?? wholesale;
     setForm({
       id: product.id,
       name: product.name,
       description: product.description,
-      price: product.price,
+      retail_price: retail,
+      regular_price: regular,
+      wholesale_price: wholesale,
+      bulk_price: bulk,
+      regular_min_qty: product.regular_min_qty ?? 10,
+      wholesale_min_qty: product.wholesale_min_qty ?? 50,
+      bulk_min_qty: product.bulk_min_qty ?? 100,
       cost: product.cost,
       category: product.category,
       stock: product.stock,
@@ -243,6 +276,9 @@ export default function AdminProducts() {
             .update({
               stock: Number.isFinite(item.stock) ? item.stock : item.current,
               price: Number.isFinite(item.price) ? item.price : item.currentPrice,
+              retail_price: Number.isFinite(item.price)
+                ? item.price
+                : item.currentPrice,
               cost: Number.isFinite(item.cost) ? item.cost : item.currentCost,
             })
             .eq("id", item.id)
@@ -311,12 +347,50 @@ export default function AdminProducts() {
           />
         </div>
         <div>
-          <label className="text-xs uppercase tracking-[0.3em] text-white/60">Price</label>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Retail Price
+          </label>
           <input
             type="number"
             required
-            value={form.price}
-            onChange={handleChange("price")}
+            value={form.retail_price}
+            onChange={handleChange("retail_price")}
+            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Regular Price
+          </label>
+          <input
+            type="number"
+            required
+            value={form.regular_price}
+            onChange={handleChange("regular_price")}
+            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Wholesale Price
+          </label>
+          <input
+            type="number"
+            required
+            value={form.wholesale_price}
+            onChange={handleChange("wholesale_price")}
+            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Bulk Price
+          </label>
+          <input
+            type="number"
+            required
+            value={form.bulk_price}
+            onChange={handleChange("bulk_price")}
             className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
           />
         </div>
@@ -327,6 +401,45 @@ export default function AdminProducts() {
             required
             value={form.cost}
             onChange={handleChange("cost")}
+            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Regular Minimum Qty
+          </label>
+          <input
+            type="number"
+            min="1"
+            required
+            value={form.regular_min_qty}
+            onChange={handleChange("regular_min_qty")}
+            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Wholesale Minimum Qty
+          </label>
+          <input
+            type="number"
+            min="1"
+            required
+            value={form.wholesale_min_qty}
+            onChange={handleChange("wholesale_min_qty")}
+            className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
+          />
+        </div>
+        <div>
+          <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+            Bulk Minimum Qty
+          </label>
+          <input
+            type="number"
+            min="1"
+            required
+            value={form.bulk_min_qty}
+            onChange={handleChange("bulk_min_qty")}
             className="mt-2 w-full rounded-xl bg-black px-4 py-3 text-white outline-none ring-1 ring-white/10 focus:ring-white/40"
           />
         </div>
@@ -490,7 +603,7 @@ export default function AdminProducts() {
                       />
                     </td>
                     <td className="px-4 py-3">
-                      {formatCurrency(product.price ?? 0)}
+                      {formatCurrency(product.retail_price ?? product.price ?? 0)}
                     </td>
                     <td className="px-4 py-3">
                       <input
@@ -542,7 +655,9 @@ export default function AdminProducts() {
             <div>
               <h3 className="text-sm uppercase tracking-[0.2em]">{product.name}</h3>
               <p className="text-white/60 text-sm">
-                {product.category || "Uncategorized"} · {formatCurrency(product.price)} · Stock {product.stock}
+                {product.category || "Uncategorized"} ·{" "}
+                {formatCurrency(product.retail_price ?? product.price)} · Stock{" "}
+                {product.stock}
               </p>
             </div>
             <div className="flex items-center gap-4">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createUniqueOrderNumber } from "../../../../lib/orderNumber";
+import { calculateTierPrice } from "../../../../lib/pricing";
 
 // DB helper: admin Supabase client for server-side writes
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -51,7 +52,9 @@ export async function POST(request) {
     // Fetch product snapshot for pricing + stock validation
     const { data: products, error: productsError } = await supabase
       .from("products")
-      .select("id,name,price,stock")
+      .select(
+        "id,name,price,retail_price,regular_price,wholesale_price,bulk_price,regular_min_qty,wholesale_min_qty,bulk_min_qty,stock"
+      )
       .in("id", productIds);
 
     if (productsError) {
@@ -85,7 +88,8 @@ export async function POST(request) {
           { status: 409 }
         );
       }
-      total += Number(product.price) * qty;
+      const { price } = calculateTierPrice(product, qty);
+      total += Number(price) * qty;
     }
 
     // Create unique order number
@@ -117,12 +121,13 @@ export async function POST(request) {
     // Insert order items with snapshot name/price
     const orderItems = items.map((item) => {
       const product = productMap.get(item.product_id);
+      const { price } = calculateTierPrice(product, Number(item.quantity));
       return {
         order_id: order.id,
         product_id: item.product_id,
         product_name: product.name,
         quantity: Number(item.quantity),
-        price: Number(product.price),
+        price: Number(price),
       };
     });
 

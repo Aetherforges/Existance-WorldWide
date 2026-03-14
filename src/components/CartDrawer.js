@@ -5,6 +5,7 @@ import Image from "next/image";
 import { X, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { formatCurrency, resolveImageUrl } from "../lib/format";
+import { calculateTierPrice } from "../lib/pricing";
 import Link from "next/link";
 
 export default function CartDrawer() {
@@ -41,15 +42,17 @@ export default function CartDrawer() {
               )}
               <div className="max-h-full space-y-6 overflow-y-auto pr-2 scroll-smooth scrollbar-elegant">
                 <AnimatePresence initial={false}>
-                  {items.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      className="flex gap-4"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                    >
+                  {items.map((item) => {
+                    const pricing = calculateTierPrice(item, item.quantity);
+                    return (
+                      <motion.div
+                        key={item.id}
+                        className="flex gap-4"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
                   <Image
                     src={resolveImageUrl(item.images?.[0] ?? item.image)}
                     alt={item.name}
@@ -68,7 +71,7 @@ export default function CartDrawer() {
                           </button>
                         </div>
                         <p className="text-white/60 text-sm">
-                          {formatCurrency(item.price)}
+                          {formatCurrency(pricing.price)}
                         </p>
                         <div className="mt-3 flex items-center gap-3">
                           <button
@@ -95,7 +98,8 @@ export default function CartDrawer() {
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </AnimatePresence>
               </div>
             </div>

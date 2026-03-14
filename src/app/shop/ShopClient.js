@@ -17,7 +17,9 @@ export default function ShopClient() {
     async function load() {
       const query = supabase
         .from("products")
-        .select("id,name,description,price,images,category,stock")
+        .select(
+          "id,name,description,price,images,category,stock,retail_price,regular_price,wholesale_price,bulk_price,regular_min_qty,wholesale_min_qty,bulk_min_qty"
+        )
         .order("created_at", { ascending: false });
       const { data, error } = await query;
 

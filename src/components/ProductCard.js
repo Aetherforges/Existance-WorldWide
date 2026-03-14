@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCart } from "../context/CartContext";
 import { formatCurrency, resolveImageUrl } from "../lib/format";
+import { calculateTierPrice, getTierConfig } from "../lib/pricing";
 
 const ProductGallery = dynamic(() => import("./ProductGallery"), {
   ssr: false,
@@ -14,8 +15,18 @@ const ProductGallery = dynamic(() => import("./ProductGallery"), {
 export default function ProductCard({ product }) {
   const [open, setOpen] = useState(false);
   const [fly, setFly] = useState(null);
+  const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   const addButtonRef = useRef(null);
+  const tierConfig = getTierConfig(product);
+  const pricing = calculateTierPrice(product, quantity);
+  const displayPrice = calculateTierPrice(product, 1).price;
+
+  useEffect(() => {
+    if (open) {
+      setQuantity(1);
+    }
+  }, [open]);
 
   return (
     <>
@@ -47,7 +58,7 @@ export default function ProductCard({ product }) {
           <div className="mt-4 space-y-1">
             <h3 className="text-sm uppercase tracking-[0.2em]">{product.name}</h3>
             <p className="text-white/60 text-sm">
-              {formatCurrency(product.price)}
+              {formatCurrency(displayPrice)}
             </p>
           </div>
         </button>
@@ -102,11 +113,55 @@ export default function ProductCard({ product }) {
                   <p className="mt-3 text-white/60">
                     {product.description ?? ""}
                   </p>
-                  <p className="mt-6 text-xl">{formatCurrency(product.price)}</p>
+                  <p className="mt-6 text-xl">
+                    {formatCurrency(pricing.price)}{" "}
+                    <span className="text-xs uppercase tracking-[0.3em] text-white/50">
+                      {pricing.tier} price
+                    </span>
+                  </p>
+
+                  <div className="mt-4 flex items-center gap-3">
+                    <label className="text-xs uppercase tracking-[0.3em] text-white/60">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(event) =>
+                        setQuantity(Math.max(1, Number(event.target.value || 1)))
+                      }
+                      className="w-24 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                    />
+                  </div>
+
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-white/70">
+                    <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+                      Pricing
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span>Retail</span>
+                        <span>{formatCurrency(tierConfig.retail)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Regular ({tierConfig.regularMin}+)</span>
+                        <span>{formatCurrency(tierConfig.regular)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Wholesale ({tierConfig.wholesaleMin}+)</span>
+                        <span>{formatCurrency(tierConfig.wholesale)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Bulk ({tierConfig.bulkMin}+)</span>
+                        <span>{formatCurrency(tierConfig.bulk)}</span>
+                      </div>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     disabled={product.stock === 0}
-                    onClick={() => addItem(product, 1)}
+                    onClick={() => addItem(product, quantity)}
                     className={`mt-8 rounded-full px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] transition ${
                       product.stock === 0
                         ? "cursor-not-allowed bg-white/10 text-white/40"

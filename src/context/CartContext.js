@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { calculateTierPrice } from "../lib/pricing";
 
 const CartContext = createContext(null);
 
@@ -32,13 +33,18 @@ export function CartProvider({ children }) {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+        return prev.map((item) => {
+          if (item.id !== product.id) return item;
+          const nextQty = item.quantity + quantity;
+          const { price } = calculateTierPrice(
+            { ...item, ...product },
+            nextQty
+          );
+          return { ...item, ...product, quantity: nextQty, price };
+        });
       }
-      return [...prev, { ...product, quantity }];
+      const { price } = calculateTierPrice(product, quantity);
+      return [...prev, { ...product, quantity, price }];
     });
     setIsOpen(true);
   };
@@ -46,9 +52,12 @@ export function CartProvider({ children }) {
   const updateQuantity = (id, quantity) => {
     setItems((prev) =>
       prev
-        .map((item) =>
-          item.id === id ? { ...item, quantity: Math.max(1, quantity) } : item
-        )
+        .map((item) => {
+          if (item.id !== id) return item;
+          const nextQty = Math.max(1, quantity);
+          const { price } = calculateTierPrice(item, nextQty);
+          return { ...item, quantity: nextQty, price };
+        })
         .filter((item) => item.quantity > 0)
     );
   };
