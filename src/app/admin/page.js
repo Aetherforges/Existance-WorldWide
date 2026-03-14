@@ -405,6 +405,21 @@ export default function AdminDashboard() {
           className="rounded-2xl border border-white/10 bg-[#111111] p-6"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+        >
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Profit</p>
+          <div
+            className={`mt-4 ${
+              metrics.profit >= 0 ? "text-emerald-300" : "text-red-300"
+            }`}
+          >
+            <AnimatedNumber value={metrics.profit} formatter={formatCurrency} />
+          </div>
+        </motion.div>
+        <motion.div
+          className="rounded-2xl border border-white/10 bg-[#111111] p-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
         >
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">Pending Orders</p>
