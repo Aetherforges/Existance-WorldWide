@@ -49,9 +49,6 @@ export default function ProductCard({ product }) {
             <p className="text-white/60 text-sm">
               {formatCurrency(product.price)}
             </p>
-            <p className="text-xs text-white/50">
-              Stock: {product.stock ?? 0}
-            </p>
           </div>
         </button>
 

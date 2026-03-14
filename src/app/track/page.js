@@ -46,6 +46,9 @@ export default function OrderTrackingPage() {
           <h1 className="mt-2 font-display text-3xl tracking-[0.2em]">
             Track Your Order
           </h1>
+          <p className="mt-2 text-xs uppercase tracking-[0.25em] text-white/50">
+            Note: For Lalamove deliveries, we only accommodate 12:00 PM to 8:00 PM.
+          </p>
           <p className="mt-3 text-sm text-white/60">
             Enter your order number to view the latest status and tracking details.
           </p>
