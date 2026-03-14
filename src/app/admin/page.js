@@ -20,6 +20,11 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
+  const [walkInSales, setWalkInSales] = useState([]);
+  const [walkInAmount, setWalkInAmount] = useState("");
+  const [walkInNote, setWalkInNote] = useState("");
+  const [walkInLoading, setWalkInLoading] = useState(false);
+  const [walkInError, setWalkInError] = useState("");
   const [range, setRange] = useState(() => {
     const today = new Date();
     const start = new Date();
@@ -51,6 +56,13 @@ export default function AdminDashboard() {
         .select("order_id,product_id,quantity,price,products(cost)");
       if (!active) return;
       setOrderItems(orderItems ?? []);
+
+      const { data: walkIns } = await supabase
+        .from("walk_in_sales")
+        .select("id,amount,created_at,note")
+        .order("created_at", { ascending: false });
+      if (!active) return;
+      setWalkInSales(walkIns ?? []);
     }
     load();
     return () => {
@@ -73,6 +85,20 @@ export default function AdminDashboard() {
     });
   }, [orders, range.from, range.to]);
 
+  const filteredWalkIns = useMemo(() => {
+    const fromDate = new Date(range.from);
+    const toDate = new Date(range.to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      return walkInSales;
+    }
+    toDate.setHours(23, 59, 59, 999);
+    return walkInSales.filter((sale) => {
+      if (!sale.created_at) return false;
+      const created = new Date(sale.created_at);
+      return created >= fromDate && created <= toDate;
+    });
+  }, [walkInSales, range.from, range.to]);
+
   const customerCount = useMemo(() => {
     const uniqueCustomers = new Set();
     filteredOrders.forEach((order) => {
@@ -88,11 +114,14 @@ export default function AdminDashboard() {
   }, [filteredOrders]);
 
   const metrics = useMemo(() => {
-    const totalOrders = filteredOrders.length;
-    const revenue = filteredOrders.reduce(
-      (sum, order) => sum + (order.total ?? 0),
+    const walkInTotal = filteredWalkIns.reduce(
+      (sum, sale) => sum + (sale.amount ?? 0),
       0
     );
+    const totalOrders = filteredOrders.length + filteredWalkIns.length;
+    const revenue =
+      filteredOrders.reduce((sum, order) => sum + (order.total ?? 0), 0) +
+      walkInTotal;
     const pending = filteredOrders.filter((order) => order.status === "Pending").length;
     const delivered = filteredOrders.filter((order) => order.status === "Delivered").length;
     const orderIdSet = new Set(filteredOrders.map((order) => order.id));
@@ -103,8 +132,18 @@ export default function AdminDashboard() {
     }, 0);
     const profit = revenue - costTotal;
     const costPlusTotal = costTotal + profit;
-    return { totalOrders, revenue, pending, delivered, costTotal, profit, costPlusTotal };
-  }, [filteredOrders, orderItems]);
+    return {
+      totalOrders,
+      revenue,
+      pending,
+      delivered,
+      costTotal,
+      profit,
+      costPlusTotal,
+      walkInTotal,
+      walkInCount: filteredWalkIns.length,
+    };
+  }, [filteredOrders, filteredWalkIns, orderItems]);
 
   const dailyLabels = useMemo(() => {
     const days = [];
@@ -120,22 +159,23 @@ export default function AdminDashboard() {
   }, []);
 
   const dailyData = useMemo(() => {
-    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const totals = new Array(7).fill(0);
-    filteredOrders.forEach((order) => {
-      if (!order.created_at) return;
-      const created = new Date(order.created_at);
-      const diff = Math.floor(
-        (now.setHours(0, 0, 0, 0) - created.setHours(0, 0, 0, 0)) /
-          (1000 * 60 * 60 * 24)
-      );
+    const addToDay = (createdAt, amount) => {
+      if (!createdAt) return;
+      const created = new Date(createdAt);
+      created.setHours(0, 0, 0, 0);
+      const diff = Math.floor((today - created) / (1000 * 60 * 60 * 24));
       if (diff >= 0 && diff < 7) {
         const idx = 6 - diff;
-        totals[idx] += order.total ?? 0;
+        totals[idx] += amount ?? 0;
       }
-    });
+    };
+    filteredOrders.forEach((order) => addToDay(order.created_at, order.total ?? 0));
+    filteredWalkIns.forEach((sale) => addToDay(sale.created_at, sale.amount ?? 0));
     return totals;
-  }, [filteredOrders]);
+  }, [filteredOrders, filteredWalkIns]);
 
   const monthlyLabels = useMemo(() => {
     const labels = [];
@@ -150,19 +190,21 @@ export default function AdminDashboard() {
   const monthlyData = useMemo(() => {
     const now = new Date();
     const totals = new Array(6).fill(0);
-    filteredOrders.forEach((order) => {
-      if (!order.created_at) return;
-      const created = new Date(order.created_at);
+    const addToMonth = (createdAt, amount) => {
+      if (!createdAt) return;
+      const created = new Date(createdAt);
       const monthDiff =
         (now.getFullYear() - created.getFullYear()) * 12 +
         (now.getMonth() - created.getMonth());
       if (monthDiff >= 0 && monthDiff < 6) {
         const idx = 5 - monthDiff;
-        totals[idx] += order.total ?? 0;
+        totals[idx] += amount ?? 0;
       }
-    });
+    };
+    filteredOrders.forEach((order) => addToMonth(order.created_at, order.total ?? 0));
+    filteredWalkIns.forEach((sale) => addToMonth(sale.created_at, sale.amount ?? 0));
     return totals;
-  }, [filteredOrders]);
+  }, [filteredOrders, filteredWalkIns]);
 
   const yearlyLabels = useMemo(() => {
     const labels = [];
@@ -176,17 +218,19 @@ export default function AdminDashboard() {
   const yearlyData = useMemo(() => {
     const now = new Date();
     const totals = new Array(5).fill(0);
-    filteredOrders.forEach((order) => {
-      if (!order.created_at) return;
-      const created = new Date(order.created_at);
+    const addToYear = (createdAt, amount) => {
+      if (!createdAt) return;
+      const created = new Date(createdAt);
       const diff = now.getFullYear() - created.getFullYear();
       if (diff >= 0 && diff < 5) {
         const idx = 4 - diff;
-        totals[idx] += order.total ?? 0;
+        totals[idx] += amount ?? 0;
       }
-    });
+    };
+    filteredOrders.forEach((order) => addToYear(order.created_at, order.total ?? 0));
+    filteredWalkIns.forEach((sale) => addToYear(sale.created_at, sale.amount ?? 0));
     return totals;
-  }, [filteredOrders]);
+  }, [filteredOrders, filteredWalkIns]);
 
   function AnimatedNumber({ value, formatter }) {
     const [displayValue, setDisplayValue] = useState(0);
@@ -214,6 +258,34 @@ export default function AdminDashboard() {
         {formatter ? formatter(displayValue) : displayValue}
       </span>
     );
+  }
+
+  async function handleAddWalkIn(event) {
+    event.preventDefault();
+    setWalkInError("");
+    const amountValue = Number(walkInAmount);
+    if (!amountValue || amountValue <= 0) {
+      setWalkInError("Enter a valid amount for the walk-in sale.");
+      return;
+    }
+    setWalkInLoading(true);
+    const { error } = await supabase.from("walk_in_sales").insert({
+      amount: amountValue,
+      note: walkInNote || null,
+    });
+    if (error) {
+      setWalkInError(error.message || "Unable to add walk-in sale.");
+      setWalkInLoading(false);
+      return;
+    }
+    setWalkInAmount("");
+    setWalkInNote("");
+    setWalkInLoading(false);
+    const { data } = await supabase
+      .from("walk_in_sales")
+      .select("id,amount,created_at,note")
+      .order("created_at", { ascending: false });
+    setWalkInSales(data ?? []);
   }
 
   return (
@@ -244,9 +316,54 @@ export default function AdminDashboard() {
           />
         </div>
         <p className="text-xs text-white/50">
-          Showing {filteredOrders.length} orders
+          Showing {metrics.totalOrders} orders
         </p>
       </div>
+
+      <form
+        onSubmit={handleAddWalkIn}
+        className="rounded-2xl border border-white/10 bg-[#111111] p-6"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">
+              Walk-In Orders
+            </p>
+            <p className="mt-2 text-sm text-white/60">
+              Add retail sales here and they will be included in totals and charts.
+            </p>
+          </div>
+          <p className="text-sm text-white/70">
+            Walk-In Total: {formatCurrency(metrics.walkInTotal)}
+          </p>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1.5fr_auto]">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Amount"
+            value={walkInAmount}
+            onChange={(event) => setWalkInAmount(event.target.value)}
+            className="rounded-full bg-black px-4 py-3 text-xs uppercase tracking-[0.3em] text-white ring-1 ring-white/10 focus:ring-white/40"
+          />
+          <input
+            type="text"
+            placeholder="Note (optional)"
+            value={walkInNote}
+            onChange={(event) => setWalkInNote(event.target.value)}
+            className="rounded-full bg-black px-4 py-3 text-xs uppercase tracking-[0.3em] text-white ring-1 ring-white/10 focus:ring-white/40"
+          />
+          <button
+            type="submit"
+            disabled={walkInLoading}
+            className="glow-button rounded-full bg-white px-6 py-3 text-xs font-semibold uppercase tracking-[0.4em] text-black"
+          >
+            {walkInLoading ? "Saving" : "Add Walk-In Sale"}
+          </button>
+        </div>
+        {walkInError && <p className="mt-3 text-sm text-red-400">{walkInError}</p>}
+      </form>
 
       <div className="grid gap-6 md:grid-cols-3">
         <motion.div

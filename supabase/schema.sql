@@ -43,6 +43,14 @@ create table if not exists order_items (
   quantity integer not null default 1
 );
 
+-- WALK-IN SALES
+create table if not exists walk_in_sales (
+  id uuid primary key default uuid_generate_v4(),
+  amount numeric not null,
+  note text,
+  created_at timestamp with time zone default now()
+);
+
 -- USER ROLES (RBAC)
 create table if not exists user_roles (
   id uuid primary key default uuid_generate_v4(),
@@ -70,6 +78,7 @@ alter table customers enable row level security;
 alter table orders enable row level security;
 alter table order_items enable row level security;
 alter table user_roles enable row level security;
+alter table walk_in_sales enable row level security;
 
 -- PRODUCTS POLICIES
 drop policy if exists "Public read products" on products;
@@ -105,4 +114,9 @@ for insert with check (auth.role() = 'authenticated');
 
 drop policy if exists "Admin manage order items" on order_items;
 create policy "Admin manage order items" on order_items
+for all using (is_admin()) with check (is_admin());
+
+-- WALK-IN SALES POLICIES
+drop policy if exists "Admin manage walk in sales" on walk_in_sales;
+create policy "Admin manage walk in sales" on walk_in_sales
 for all using (is_admin()) with check (is_admin());
