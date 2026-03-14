@@ -29,6 +29,7 @@ create table if not exists orders (
   total numeric not null,
   status text default 'Pending',
   delivery_method text,
+  tracking_number text,
   shipping_name text,
   phone text,
   address text,
