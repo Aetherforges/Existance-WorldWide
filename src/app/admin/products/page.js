@@ -37,6 +37,7 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [bulkStocks, setBulkStocks] = useState({});
+  const [bulkPrices, setBulkPrices] = useState({});
 
   async function fetchProducts() {
     const { data } = await supabase
@@ -49,6 +50,15 @@ export default function AdminProducts() {
       (data ?? []).forEach((product) => {
         if (next[product.id] === undefined || next[product.id] === null) {
           next[product.id] = product.stock ?? 0;
+        }
+      });
+      return next;
+    });
+    setBulkPrices((prev) => {
+      const next = { ...prev };
+      (data ?? []).forEach((product) => {
+        if (next[product.id] === undefined || next[product.id] === null) {
+          next[product.id] = product.price ?? 0;
         }
       });
       return next;
@@ -194,19 +204,33 @@ export default function AdminProducts() {
       .map((product) => ({
         id: product.id,
         stock: Number(bulkStocks[product.id]),
+        price: Number(bulkPrices[product.id]),
         current: product.stock ?? 0,
+        currentPrice: product.price ?? 0,
       }))
-      .filter((item) => Number.isFinite(item.stock) && item.stock !== item.current);
+      .filter((item) => {
+        const stockChanged =
+          Number.isFinite(item.stock) && item.stock !== item.current;
+        const priceChanged =
+          Number.isFinite(item.price) && item.price !== item.currentPrice;
+        return stockChanged || priceChanged;
+      });
 
     if (updates.length === 0) {
-      setError("No stock changes to save.");
+      setError("No bulk changes to save.");
       return;
     }
 
     try {
       await Promise.all(
         updates.map((item) =>
-          supabase.from("products").update({ stock: item.stock }).eq("id", item.id)
+          supabase
+            .from("products")
+            .update({
+              stock: Number.isFinite(item.stock) ? item.stock : item.current,
+              price: Number.isFinite(item.price) ? item.price : item.currentPrice,
+            })
+            .eq("id", item.id)
         )
       );
       await fetchProducts();
@@ -404,7 +428,7 @@ export default function AdminProducts() {
                 Inventory
               </p>
               <h2 className="font-display text-2xl tracking-[0.2em]">
-                Bulk Stock Update
+                Bulk Stock & Price Update
               </h2>
             </div>
             <button
@@ -416,7 +440,7 @@ export default function AdminProducts() {
             </button>
           </div>
           <p className="mt-3 text-xs text-white/50">
-            Update multiple product stocks at once. Only changed values are saved.
+            Update multiple product stocks and prices at once. Only changed values are saved.
           </p>
           <div className="mt-6 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -425,6 +449,8 @@ export default function AdminProducts() {
                   <th className="px-4 py-3">Product</th>
                   <th className="px-4 py-3">Current</th>
                   <th className="px-4 py-3">New Stock</th>
+                  <th className="px-4 py-3">Current Price</th>
+                  <th className="px-4 py-3">New Price</th>
                 </tr>
               </thead>
               <tbody>
@@ -444,6 +470,24 @@ export default function AdminProducts() {
                           }))
                         }
                         className="w-28 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatCurrency(product.price ?? 0)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={bulkPrices[product.id] ?? ""}
+                        onChange={(event) =>
+                          setBulkPrices((prev) => ({
+                            ...prev,
+                            [product.id]: event.target.value,
+                          }))
+                        }
+                        className="w-32 rounded-full bg-black px-3 py-2 text-sm text-white ring-1 ring-white/20"
                       />
                     </td>
                   </tr>
