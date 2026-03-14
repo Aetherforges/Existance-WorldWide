@@ -323,8 +323,7 @@ export default function WaybillPage() {
             </div>
           </div>
         </div>
-              </p>
-            </div>
-          </div>
-        </div>
+      </div>
+    </div>
+  );
 }
