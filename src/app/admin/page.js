@@ -18,7 +18,6 @@ const AnalyticsChart = dynamic(() => import("../../components/AnalyticsChart"), 
 
 export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
-  const [customerCount, setCustomerCount] = useState(0);
   const [inventory, setInventory] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [range, setRange] = useState(() => {
@@ -40,18 +39,6 @@ export default function AdminDashboard() {
         .order("created_at", { ascending: false });
       if (!active) return;
       setOrders(data ?? []);
-      if (!active) return;
-      const uniqueCustomers = new Set();
-      (data ?? []).forEach((order) => {
-        if (order.customer_id) {
-          uniqueCustomers.add(`id:${order.customer_id}`);
-        } else if (order.shipping_name || order.phone) {
-          uniqueCustomers.add(
-            `guest:${order.shipping_name || ""}:${order.phone || ""}`.toLowerCase()
-          );
-        }
-      });
-      setCustomerCount(uniqueCustomers.size);
       const { data: products } = await supabase
         .from("products")
         .select("id,name,category,price,stock,cost")
@@ -71,33 +58,53 @@ export default function AdminDashboard() {
     };
   }, []);
 
+  const filteredOrders = useMemo(() => {
+    const fromDate = new Date(range.from);
+    const toDate = new Date(range.to);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+      return orders.filter((order) => order.status !== "Cancelled");
+    }
+    toDate.setHours(23, 59, 59, 999);
+    return orders.filter((order) => {
+      if (!order.created_at) return false;
+      if (order.status === "Cancelled") return false;
+      const created = new Date(order.created_at);
+      return created >= fromDate && created <= toDate;
+    });
+  }, [orders, range.from, range.to]);
+
+  const customerCount = useMemo(() => {
+    const uniqueCustomers = new Set();
+    filteredOrders.forEach((order) => {
+      if (order.customer_id) {
+        uniqueCustomers.add(`id:${order.customer_id}`);
+      } else if (order.shipping_name || order.phone) {
+        uniqueCustomers.add(
+          `guest:${order.shipping_name || ""}:${order.phone || ""}`.toLowerCase()
+        );
+      }
+    });
+    return uniqueCustomers.size;
+  }, [filteredOrders]);
+
   const metrics = useMemo(() => {
-    const totalOrders = orders.length;
-    const revenue = orders.reduce((sum, order) => sum + (order.total ?? 0), 0);
-    const pending = orders.filter((order) => order.status === "Pending").length;
-    const delivered = orders.filter((order) => order.status === "Delivered").length;
+    const totalOrders = filteredOrders.length;
+    const revenue = filteredOrders.reduce(
+      (sum, order) => sum + (order.total ?? 0),
+      0
+    );
+    const pending = filteredOrders.filter((order) => order.status === "Pending").length;
+    const delivered = filteredOrders.filter((order) => order.status === "Delivered").length;
+    const orderIdSet = new Set(filteredOrders.map((order) => order.id));
     const costTotal = (orderItems ?? []).reduce((sum, item) => {
+      if (!orderIdSet.has(item.order_id)) return sum;
       const cost = item.products?.cost ?? 0;
       return sum + cost * (item.quantity ?? 0);
     }, 0);
     const profit = revenue - costTotal;
     const costPlusTotal = costTotal + profit;
     return { totalOrders, revenue, pending, delivered, costTotal, profit, costPlusTotal };
-  }, [orders, orderItems]);
-
-  const filteredOrders = useMemo(() => {
-    const fromDate = new Date(range.from);
-    const toDate = new Date(range.to);
-    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
-      return orders;
-    }
-    toDate.setHours(23, 59, 59, 999);
-    return orders.filter((order) => {
-      if (!order.created_at) return false;
-      const created = new Date(order.created_at);
-      return created >= fromDate && created <= toDate;
-    });
-  }, [orders, range.from, range.to]);
+  }, [filteredOrders, orderItems]);
 
   const dailyLabels = useMemo(() => {
     const days = [];
