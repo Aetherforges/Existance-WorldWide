@@ -304,9 +304,12 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
         >
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Total Cost</p>
-          <div className="mt-4">
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Cost & Profit</p>
+          <div className="mt-4 space-y-2">
+            <div className="text-xs uppercase tracking-[0.3em] text-white/50">Cost</div>
             <AnimatedNumber value={metrics.costTotal} formatter={formatCurrency} />
+            <div className="text-xs uppercase tracking-[0.3em] text-white/50">Profit</div>
+            <AnimatedNumber value={metrics.profit} formatter={formatCurrency} />
           </div>
         </motion.div>
         <motion.div
@@ -315,9 +318,9 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
         >
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Profit</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Cost Only</p>
           <div className="mt-4">
-            <AnimatedNumber value={metrics.profit} formatter={formatCurrency} />
+            <AnimatedNumber value={metrics.costTotal} formatter={formatCurrency} />
           </div>
         </motion.div>
       </div>

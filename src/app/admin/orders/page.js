@@ -44,6 +44,37 @@ export default function AdminOrders() {
   }
 
   async function handleCancel(orderId) {
+    const target = orders.find((order) => order.id === orderId);
+    if (target?.status === "Cancelled") {
+      return;
+    }
+    const { data: items, error: itemsError } = await supabase
+      .from("order_items")
+      .select("product_id,quantity")
+      .eq("order_id", orderId);
+
+    if (itemsError) {
+      setError(itemsError.message || "Unable to cancel order.");
+      return;
+    }
+
+    await Promise.all(
+      (items ?? []).map(async (item) => {
+        const { data: product } = await supabase
+          .from("products")
+          .select("id,stock")
+          .eq("id", item.product_id)
+          .maybeSingle();
+        if (!product?.id) return null;
+        return supabase
+          .from("products")
+          .update({
+            stock: (product.stock ?? 0) + (item.quantity ?? 0),
+          })
+          .eq("id", item.product_id);
+      })
+    );
+
     await handleStatusChange(orderId, "Cancelled");
   }
 
