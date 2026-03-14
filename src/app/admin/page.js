@@ -81,7 +81,8 @@ export default function AdminDashboard() {
       return sum + cost * (item.quantity ?? 0);
     }, 0);
     const profit = revenue - costTotal;
-    return { totalOrders, revenue, pending, delivered, costTotal, profit };
+    const costPlusTotal = costTotal + profit;
+    return { totalOrders, revenue, pending, delivered, costTotal, profit, costPlusTotal };
   }, [orders, orderItems]);
 
   const filteredOrders = useMemo(() => {
@@ -304,13 +305,15 @@ export default function AdminDashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.25 }}
         >
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Cost & Profit</p>
-          <div className="mt-4 space-y-2">
-            <div className="text-xs uppercase tracking-[0.3em] text-white/50">Cost</div>
-            <AnimatedNumber value={metrics.costTotal} formatter={formatCurrency} />
-            <div className="text-xs uppercase tracking-[0.3em] text-white/50">Profit</div>
-            <AnimatedNumber value={metrics.profit} formatter={formatCurrency} />
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">
+            Cost-Plus Pricing
+          </p>
+          <div className="mt-4">
+            <AnimatedNumber value={metrics.costPlusTotal} formatter={formatCurrency} />
           </div>
+          <p className="mt-3 text-xs text-white/50">
+            Cost + Profit (selling price)
+          </p>
         </motion.div>
         <motion.div
           className="rounded-2xl border border-white/10 bg-[#111111] p-6"
