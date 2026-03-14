@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const rules = [
@@ -67,6 +68,12 @@ export default function Footer() {
       <footer className="mt-16 border-t border-white/10 bg-black/60 px-6 py-8 text-center text-xs uppercase tracking-[0.3em] text-white/60">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4">
           <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/track"
+              className="rounded-full border border-white/20 px-5 py-2 text-[10px] uppercase tracking-[0.3em] text-white/80 hover:text-white"
+            >
+              Track Order
+            </Link>
             <button
               type="button"
               onClick={() => setOpen(true)}

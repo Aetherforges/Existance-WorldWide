@@ -59,6 +59,8 @@ export default function AdminOrders() {
         });
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId) || null;
+  const trackingValue =
+    trackingDraft.trim() || selectedOrder?.tracking_number?.trim() || "";
 
   useEffect(() => {
     if (!selectedOrderId) return;
@@ -410,10 +412,10 @@ export default function AdminOrders() {
                 >
                   {trackingSaving ? "Saving" : "Save"}
                 </button>
-                {selectedOrder.tracking_number && (
+                {trackingValue && (
                   <a
                     href={`https://www.17track.net/en/track?nums=${encodeURIComponent(
-                      selectedOrder.tracking_number
+                      trackingValue
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -423,6 +425,11 @@ export default function AdminOrders() {
                   </a>
                 )}
               </div>
+              {selectedOrder.tracking_number && (
+                <p className="mt-3 text-xs text-white/50">
+                  Saved tracking number: {selectedOrder.tracking_number}
+                </p>
+              )}
               {trackingError && (
                 <p className="mt-3 text-sm text-red-400">{trackingError}</p>
               )}

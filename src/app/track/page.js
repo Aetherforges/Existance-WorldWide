@@ -143,7 +143,7 @@ export default function OrderTrackingPage() {
               </div>
             </div>
 
-            {result.tracking_number && (
+            {result.tracking_number?.trim() && (
               <div className="mt-5">
                 <a
                   href={`https://www.17track.net/en/track?nums=${encodeURIComponent(
