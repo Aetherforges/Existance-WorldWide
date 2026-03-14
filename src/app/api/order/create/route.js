@@ -1,30 +1,22 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
+import { createClient } from "@supabase/supabase-js";
+import { createUniqueOrderNumber } from "../../../../lib/orderNumber";
 
-// DB helper: shared pool for serverless execution
-const pool =
-  globalThis.__ewwPool ||
-  new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
+// DB helper: admin Supabase client for server-side writes
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!globalThis.__ewwPool) {
-  globalThis.__ewwPool = pool;
-}
-
-// Util: 8-char uppercase alphanumeric order number
-function generateOrderNumber(length = 8) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "";
-  for (let i = 0; i < length; i += 1) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+function getAdminClient() {
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("Missing Supabase service role configuration.");
   }
-  return result;
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
 }
 
 // Route handler: POST /app/api/order/create
 export async function POST(request) {
-  const client = await pool.connect();
   try {
     const body = await request.json();
     const items = body?.items ?? [];
@@ -53,85 +45,80 @@ export async function POST(request) {
       );
     }
 
-    // Begin transaction
-    await client.query("BEGIN");
-
+    const supabase = getAdminClient();
     const productIds = items.map((item) => item.product_id);
-    const { rows: products } = await client.query(
-      `SELECT id, name, price, stock
-       FROM products
-       WHERE id = ANY($1::uuid[])
-       FOR UPDATE`,
-      [productIds]
-    );
 
-    if (products.length !== productIds.length) {
-      throw Object.assign(new Error("One or more products not found."), {
-        status: 404,
-      });
+    // Fetch product snapshot for pricing + stock validation
+    const { data: products, error: productsError } = await supabase
+      .from("products")
+      .select("id,name,price,stock")
+      .in("id", productIds);
+
+    if (productsError) {
+      return NextResponse.json(
+        { success: false, message: productsError.message },
+        { status: 500 }
+      );
+    }
+    if (!products || products.length !== productIds.length) {
+      return NextResponse.json(
+        { success: false, message: "One or more products not found." },
+        { status: 404 }
+      );
     }
 
     // Stock checks + totals
     const productMap = new Map(products.map((p) => [p.id, p]));
     let total = 0;
-
     for (const item of items) {
       const product = productMap.get(item.product_id);
       const qty = Number(item.quantity || 0);
       if (!product || qty <= 0) {
-        throw Object.assign(new Error("Invalid item quantity."), { status: 400 });
+        return NextResponse.json(
+          { success: false, message: "Invalid item quantity." },
+          { status: 400 }
+        );
       }
       if ((product.stock ?? 0) < qty) {
-        throw Object.assign(new Error(`Insufficient stock for ${product.name}.`), {
-          status: 409,
-        });
+        return NextResponse.json(
+          { success: false, message: `Insufficient stock for ${product.name}.` },
+          { status: 409 }
+        );
       }
       total += Number(product.price) * qty;
     }
 
-    // Insert order with unique order_number (retry on collision)
-    let orderNumber = generateOrderNumber();
-    let orderRow = null;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      try {
-        const { rows } = await client.query(
-          `INSERT INTO orders
-           (order_number, total, shipping_name, phone, address, delivery_method, delivery_option, customer_id)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-           RETURNING id, order_number`,
-          [
-            orderNumber,
-            total,
-            shipping.name,
-            shipping.phone,
-            shipping.address,
-            deliveryMethod,
-            deliveryOption || null,
-            customer?.id || null,
-          ]
-        );
-        orderRow = rows[0];
-        break;
-      } catch (err) {
-        if (err?.code === "23505") {
-          orderNumber = generateOrderNumber();
-          continue;
-        }
-        throw err;
-      }
-    }
+    // Create unique order number
+    const orderNumber = await createUniqueOrderNumber(supabase);
 
-    if (!orderRow) {
-      throw Object.assign(new Error("Unable to generate a unique order number."), {
-        status: 500,
-      });
+    // Insert order
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        order_number: orderNumber,
+        total,
+        shipping_name: shipping.name,
+        phone: shipping.phone,
+        address: shipping.address,
+        delivery_method: deliveryMethod,
+        delivery_option: deliveryOption || null,
+        customer_id: customer?.id || null,
+      })
+      .select("id,order_number")
+      .single();
+
+    if (orderError || !order) {
+      return NextResponse.json(
+        { success: false, message: orderError?.message || "Order creation failed." },
+        { status: 500 }
+      );
     }
 
     // Insert order items with snapshot name/price
     const orderItems = items.map((item) => {
       const product = productMap.get(item.product_id);
       return {
-        order_id: orderRow.id,
+        order_id: order.id,
         product_id: item.product_id,
         product_name: product.name,
         quantity: Number(item.quantity),
@@ -139,32 +126,45 @@ export async function POST(request) {
       };
     });
 
-    for (const item of orderItems) {
-      await client.query(
-        `INSERT INTO order_items
-         (order_id, product_id, product_name, quantity, price)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [item.order_id, item.product_id, item.product_name, item.quantity, item.price]
+    const { error: itemsError } = await supabase
+      .from("order_items")
+      .insert(orderItems);
+
+    if (itemsError) {
+      await supabase.from("orders").delete().eq("id", order.id);
+      return NextResponse.json(
+        { success: false, message: itemsError.message },
+        { status: 500 }
       );
     }
 
-    // Deduct stock
+    // Deduct stock (with safety check)
     for (const item of orderItems) {
-      await client.query(
-        `UPDATE products
-         SET stock = stock - $1
-         WHERE id = $2`,
-        [item.quantity, item.product_id]
-      );
-    }
+      const { data: updated } = await supabase
+        .from("products")
+        .update({
+          stock: Math.max(0, (productMap.get(item.product_id)?.stock ?? 0) - item.quantity),
+        })
+        .eq("id", item.product_id)
+        .gte("stock", item.quantity)
+        .select("id")
+        .maybeSingle();
 
-    await client.query("COMMIT");
+      if (!updated?.id) {
+        await supabase.from("order_items").delete().eq("order_id", order.id);
+        await supabase.from("orders").delete().eq("id", order.id);
+        return NextResponse.json(
+          { success: false, message: "Stock updated failed. Please retry." },
+          { status: 409 }
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      order_number: orderRow.order_number,
+      order_number: order.order_number,
       summary: {
-        order_number: orderRow.order_number,
+        order_number: order.order_number,
         items: orderItems,
         total,
         delivery_method: deliveryMethod,
@@ -179,13 +179,9 @@ export async function POST(request) {
       },
     });
   } catch (err) {
-    await client.query("ROLLBACK");
-    const status = err?.status || 500;
     return NextResponse.json(
       { success: false, message: err?.message || "Server error." },
-      { status }
+      { status: 500 }
     );
-  } finally {
-    client.release();
   }
 }
