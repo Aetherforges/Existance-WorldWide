@@ -2,10 +2,14 @@
 
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
 import Image from "next/image";
-import ProductGallery from "./ProductGallery";
 import { useCart } from "../context/CartContext";
 import { formatCurrency, resolveImageUrl } from "../lib/format";
+
+const ProductGallery = dynamic(() => import("./ProductGallery"), {
+  ssr: false,
+});
 
 export default function ProductCard({ product }) {
   const [open, setOpen] = useState(false);
@@ -31,6 +35,7 @@ export default function ProductCard({ product }) {
               alt={product.name}
               width={640}
               height={520}
+              quality={75}
               className="h-52 w-full object-cover transition duration-500 group-hover:scale-105"
             />
             {product.stock === 0 && (

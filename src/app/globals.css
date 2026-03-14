@@ -29,6 +29,31 @@ body {
   transform: translateY(-1px);
 }
 
+.page-fade {
+  animation: pageFade 0.35s ease-out;
+}
+
+.badge-bounce {
+  animation: badgeBounce 0.35s ease-out;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 1.5rem;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-panel {
+  animation: scaleIn 0.2s ease-out;
+}
+
 .scrollbar-elegant {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
@@ -45,4 +70,62 @@ body {
 .scrollbar-elegant::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glow-button,
+  .glow-button:hover {
+    transition: none;
+    transform: none;
+  }
+
+  .page-fade,
+  .badge-bounce,
+  .modal-overlay,
+  .modal-panel {
+    animation: none;
+  }
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes badgeBounce {
+  0% {
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

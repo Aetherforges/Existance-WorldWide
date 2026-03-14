@@ -50,13 +50,14 @@ export default function CartDrawer() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <Image
-                        src={resolveImageUrl(item.images?.[0] ?? item.image)}
-                        alt={item.name}
-                        width={80}
-                        height={80}
-                        className="h-20 w-20 rounded-lg border border-white/10 object-cover"
-                      />
+                  <Image
+                    src={resolveImageUrl(item.images?.[0] ?? item.image)}
+                    alt={item.name}
+                    width={80}
+                    height={80}
+                    quality={65}
+                    className="h-20 w-20 rounded-lg border border-white/10 object-cover"
+                  />
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <h3 className="text-sm uppercase tracking-[0.15em]">

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { ShoppingCart, UserRound, LogIn, ChevronDown } from "lucide-react";
-import { motion } from "framer-motion";
 import { useCart } from "../context/CartContext";
 import { useState } from "react";
 
@@ -75,15 +74,12 @@ export default function Navbar() {
           >
             <ShoppingCart size={20} />
             {count > 0 && (
-              <motion.span
+              <span
                 key={count}
-                initial={{ scale: 0.9 }}
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 0.35 }}
-                className="absolute -top-2 -right-3 rounded-full bg-white px-2 py-0.5 text-xs text-black"
+                className="badge-bounce absolute -top-2 -right-3 rounded-full bg-white px-2 py-0.5 text-xs text-black"
               >
                 {count}
-              </motion.span>
+              </span>
             )}
           </button>
         </nav>

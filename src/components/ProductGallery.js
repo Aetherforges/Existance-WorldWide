@@ -28,6 +28,7 @@ export default function ProductGallery({ images = [] }) {
         alt="Product view"
         width={720}
         height={520}
+        quality={75}
         className="h-72 w-full rounded-2xl border border-white/10 object-cover"
       />
       <div className="flex gap-3">
@@ -45,6 +46,7 @@ export default function ProductGallery({ images = [] }) {
               alt="Thumbnail"
               width={112}
               height={112}
+              quality={60}
               className="h-full w-full object-cover"
             />
           </button>
