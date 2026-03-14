@@ -17,6 +17,7 @@ const statuses = [
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   async function fetchOrders() {
     setError("");
@@ -37,6 +38,11 @@ export default function AdminOrders() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const filteredOrders =
+    statusFilter === "All"
+      ? orders
+      : orders.filter((order) => order.status === statusFilter);
 
   async function handleStatusChange(orderId, status) {
     await supabase.from("orders").update({ status }).eq("id", orderId);
@@ -91,6 +97,24 @@ export default function AdminOrders() {
         </div>
       )}
 
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-xs uppercase tracking-[0.3em] text-white/60">
+          Filter Status
+        </p>
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          className="rounded-full bg-black px-4 py-2 text-xs uppercase tracking-[0.3em] ring-1 ring-white/20"
+        >
+          <option value="All">All</option>
+          {statuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="overflow-x-auto rounded-3xl border border-white/10">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-[#111111] text-xs uppercase tracking-[0.3em] text-white/60">
@@ -105,14 +129,16 @@ export default function AdminOrders() {
             </tr>
           </thead>
           <tbody>
-            {orders.length === 0 && (
+            {filteredOrders.length === 0 && (
               <tr className="border-t border-white/10 bg-black/40">
                 <td className="px-6 py-6 text-white/60" colSpan={7}>
-                  No orders yet.
+                  {statusFilter === "All"
+                    ? "No orders yet."
+                    : "No orders for this status yet."}
                 </td>
               </tr>
             )}
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <tr key={order.id} className="border-t border-white/10 bg-black/40">
                 <td className="px-6 py-4">
                   {order.order_number ?? order.id.slice(0, 8).toUpperCase()}
