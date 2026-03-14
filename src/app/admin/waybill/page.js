@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { formatCurrency } from "../../../lib/format";
 
@@ -34,7 +34,7 @@ export default function WaybillPage() {
       const { data } = await supabase
         .from("orders")
         .select(
-          "id,order_number,total,created_at,shipping_name,phone,address,delivery_method,order_items(quantity,products(name,price))"
+          "id,order_number,total,created_at,shipping_name,phone,address,delivery_method,order_items(quantity,product_name,products(name,price))"
         )
         .order("created_at", { ascending: false });
       if (!active) return;
@@ -95,17 +95,6 @@ export default function WaybillPage() {
     setSelectedOrderId(match.id);
   }
 
-  const suggestions = useMemo(() => {
-    const term = orderSearch.trim().toLowerCase();
-    if (!term) return [];
-    return orders
-      .filter((order) => {
-        const orderNumber = order.order_number?.toLowerCase() ?? "";
-        return orderNumber.includes(term) || order.id.toLowerCase().includes(term);
-      })
-      .slice(0, 6);
-  }, [orderSearch, orders]);
-
   const sellerDetails = useMemo(
     () => ({
       name: "Exist World Wide",
@@ -145,25 +134,6 @@ export default function WaybillPage() {
                 placeholder="Paste order number"
                 className="w-full rounded-xl bg-black px-4 py-3 text-white ring-1 ring-white/10 focus:ring-white/40"
               />
-              {suggestions.length > 0 && (
-                <div className="absolute left-0 right-0 top-full z-10 mt-2 rounded-2xl border border-white/10 bg-[#111111] p-2 text-xs">
-                  {suggestions.map((order) => (
-                    <button
-                      key={order.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedOrderId(order.id);
-                        setOrderSearch(order.order_number || order.id);
-                        setOrderSearchError("");
-                      }}
-                      className="block w-full rounded-lg px-3 py-2 text-left uppercase tracking-[0.2em] text-white/80 hover:bg-white/10"
-                    >
-                      {(order.order_number || order.id.slice(0, 8)).toUpperCase()} ·{" "}
-                      {order.shipping_name || "Guest"}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             <button
               type="button"
@@ -268,15 +238,6 @@ export default function WaybillPage() {
           >
             Print Waybill
           </button>
-          <button
-            type="button"
-            onClick={() =>
-              setOrderId(Math.random().toString(36).slice(2, 12).toUpperCase())
-            }
-            className="no-print mt-4 block rounded-full border border-white/20 px-6 py-3 text-xs uppercase tracking-[0.4em]"
-          >
-            Regenerate Order ID
-          </button>
         </div>
 
         <div className="print-area rounded-3xl border border-white/10 bg-[#111111] p-6 text-sm text-white/90">
@@ -294,7 +255,7 @@ export default function WaybillPage() {
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">
                   Send Date
                 </p>
-                <p className="mt-2 text-base">{form.sendDate || "-"}</p>
+                <p className="mt-2">{form.sendDate || "-"}</p>
               </div>
             </div>
 
@@ -306,9 +267,8 @@ export default function WaybillPage() {
                 <p className="mt-2 font-semibold">{form.buyerName || "-"}</p>
                 <p className="mt-1">{form.buyerPhone || "-"}</p>
                 <p className="mt-2 text-white/70">{form.buyerAddress || "-"}</p>
-                <p className="mt-2">
-                  {form.buyerCity || "-"}, {form.buyerProvince || "-"}{" "}
-                  {form.buyerZip || ""}
+                <p className="mt-2 text-white/70">
+                  {form.buyerCity || "-"}, {form.buyerProvince || "-"}
                 </p>
               </div>
               <div className="p-4">
@@ -320,7 +280,7 @@ export default function WaybillPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-[1fr_1fr]">
+            <div className="grid grid-cols-[1fr_1fr] border-b border-white/10">
               <div className="border-r border-white/10 p-4">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/60">
                   Product Quantity
@@ -340,27 +300,31 @@ export default function WaybillPage() {
                 </p>
               </div>
             </div>
-            <div className="border-t border-white/10 p-4">
+
+            <div className="border-b border-white/10 p-4">
               <p className="text-xs uppercase tracking-[0.3em] text-white/60">
                 Items Ordered
               </p>
               <div className="mt-2 space-y-1 text-white/70">
                 {(selectedOrder?.order_items ?? []).map((item, index) => (
-                  <p key={`${item.products?.name}-${index}`}>
-                    {item.products?.name || "Item"} x{item.quantity}
+                  <p key={`${item.product_name || item.products?.name}-${index}`}>
+                    {item.product_name || item.products?.name || "Item"} x
+                    {item.quantity}
                   </p>
                 ))}
-                {(selectedOrder?.order_items ?? []).length === 0 && (
-                  <p>-</p>
-                )}
+                {(selectedOrder?.order_items ?? []).length === 0 && <p>-</p>}
               </div>
-              <p className="mt-4 text-xs text-white/50">
+            </div>
+
+            <div className="p-4">
+              <p className="text-xs text-white/60">
                 © All Rights Reserved Exist WorldWide
               </p>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
+              </p>
+            </div>
+          </div>
+        </div>
 }
