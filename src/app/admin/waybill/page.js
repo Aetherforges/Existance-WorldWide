@@ -1,6 +1,5 @@
 ﻿"use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect, useMemo } from "react"
 import { supabase } from "../../../lib/supabaseClient";
 import { formatCurrency } from "../../../lib/format";
 
