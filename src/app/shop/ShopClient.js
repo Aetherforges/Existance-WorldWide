@@ -11,7 +11,6 @@ export default function ShopClient() {
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const category = searchParams.get("category");
-
   useEffect(() => {
     let active = true;
     async function load() {
